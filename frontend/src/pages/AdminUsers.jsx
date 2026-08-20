@@ -241,8 +241,8 @@ export default function AdminUsers() {
   const getWhatsAppLink = (fullName, phone, username, password = '123456') => {
     if (!phone) return null;
     const cleanPhone = phone.replace(/[^\d]/g, '');
-    const appUrl = window.location.origin;
-    const msg = `¡Hola ${fullName}! Bendiciones. Te damos la bienvenida a la aplicación oficial de la Iglesia Restauración.\n\n🔑 Tus credenciales de acceso:\n• Usuario: ${username}\n• Contraseña: ${password}\n\n📲 Ingresa y descarga la App desde aquí:\n${appUrl}/login\n\n¡Que sea de gran edificación para tu vida!`;
+    const appUrl = 'https://app-iglesia-frontend.onrender.com';
+    const msg = `¡Hola ${fullName}! Bendiciones. Te damos la bienvenida a la aplicación oficial de la Iglesia Restauración.\n\n🔑 Tus credenciales de acceso:\n• Usuario: ${username}\n• Contraseña: ${password}\n\n📲 Ingresa y descarga la App desde aquí:\n${appUrl}/\n\n¡Que sea de gran edificación para tu vida!`;
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
   };
 
@@ -267,16 +267,16 @@ export default function AdminUsers() {
 
   // Summary Statistics
   const totalUsers = users.length;
-  const adminCount = users.filter((u) => u.role === 'ADMIN' || u.role === 'PASTOR').length;
-  const leaderCount = users.filter((u) => u.role === 'LIDER').length;
+  const adminCount = users.filter((u) => u.role === 'ADMIN').length;
+  const pastorLeaderCount = users.filter((u) => u.role === 'PASTOR' || u.role === 'LIDER').length;
   const memberCount = users.filter((u) => u.role === 'MIEMBRO').length;
 
   const getRoleBadge = (role) => {
     switch (role) {
       case 'ADMIN':
-        return <Chip icon={<AdminIcon />} label="Pastor Principal (Admin)" color="primary" size="small" />;
+        return <Chip icon={<AdminIcon />} label="Administrador Principal" color="primary" size="small" />;
       case 'PASTOR':
-        return <Chip icon={<PastorIcon />} label="Pastor Asistente" color="secondary" size="small" />;
+        return <Chip icon={<PastorIcon />} label="Pastor" color="secondary" size="small" />;
       case 'LIDER':
         return <Chip icon={<LeaderIcon />} label="Líder" color="info" size="small" />;
       default:
@@ -353,7 +353,7 @@ export default function AdminUsers() {
           <Card elevation={2} sx={{ borderRadius: 3, borderLeft: '5px solid #0284C7' }}>
             <CardContent sx={{ p: 2.5 }}>
               <Typography variant="caption" sx={{ color: '#0284C7', fontWeight: 600 }}>
-                PASTORES Y ADMINS
+                ADMINISTRADORES
               </Typography>
               <Typography variant="h4" sx={{ fontWeight: 800, color: '#0284C7', mt: 0.5 }}>
                 {adminCount}
@@ -366,10 +366,10 @@ export default function AdminUsers() {
           <Card elevation={2} sx={{ borderRadius: 3, borderLeft: '5px solid #EAB308' }}>
             <CardContent sx={{ p: 2.5 }}>
               <Typography variant="caption" sx={{ color: '#CA8A04', fontWeight: 600 }}>
-                LÍDERES DE MINISTERIO
+                PASTORES Y LÍDERES
               </Typography>
               <Typography variant="h4" sx={{ fontWeight: 800, color: '#CA8A04', mt: 0.5 }}>
-                {leaderCount}
+                {pastorLeaderCount}
               </Typography>
             </CardContent>
           </Card>
@@ -413,8 +413,8 @@ export default function AdminUsers() {
               <InputLabel>Filtrar por Rol</InputLabel>
               <Select value={roleFilter} label="Filtrar por Rol" onChange={(e) => setRoleFilter(e.target.value)}>
                 <MenuItem value="ALL">Todos los Roles</MenuItem>
-                <MenuItem value="ADMIN">Pastores Principales (Admin)</MenuItem>
-                <MenuItem value="PASTOR">Pastores Asistentes</MenuItem>
+                <MenuItem value="ADMIN">Administradores Principales</MenuItem>
+                <MenuItem value="PASTOR">Pastores</MenuItem>
                 <MenuItem value="LIDER">Líderes de Ministerio</MenuItem>
                 <MenuItem value="MIEMBRO">Miembros Congregantes</MenuItem>
               </Select>
@@ -640,8 +640,8 @@ export default function AdminUsers() {
                     label="Rol en la Iglesia *"
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   >
-                    <MenuItem value="ADMIN">Pastor Principal (Admin)</MenuItem>
-                    <MenuItem value="PASTOR">Pastor Asistente</MenuItem>
+                    <MenuItem value="ADMIN">Administrador Principal (Admin)</MenuItem>
+                    <MenuItem value="PASTOR">Pastor</MenuItem>
                     <MenuItem value="LIDER">Líder de Ministerio</MenuItem>
                     <MenuItem value="MIEMBRO">Miembro Congregante</MenuItem>
                   </Select>
