@@ -35,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import { sermonAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { showLocalNotification } from '../services/notificationService';
 
 export default function Sermons() {
   const { currentRole } = useAuth();
@@ -116,6 +117,7 @@ export default function Sermons() {
       } else {
         await sermonAPI.create(formData);
         setSuccessMsg(`"${formData.title}" publicado exitosamente.`);
+        showLocalNotification('🎙️ Nuevo Sermón / Podcast', `${formData.title} - ${formData.speaker || 'Iglesia Restauración'}`, '/sermons');
       }
       setDialogOpen(false);
       fetchSermons();

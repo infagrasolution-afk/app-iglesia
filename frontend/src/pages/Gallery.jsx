@@ -39,6 +39,7 @@ import {
   Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { mediaAPI } from '../services/api';
+import { showLocalNotification } from '../services/notificationService';
 import { useAuth } from '../context/AuthContext';
 
 const CATEGORIES = ['Todos', 'Cultos', 'Eventos', 'Retiros', 'Jóvenes', 'Escuela Dominical'];
@@ -128,6 +129,11 @@ export default function Gallery() {
       } else {
         await mediaAPI.create(formData);
         setSuccessMsg(`"${formData.title}" agregado exitosamente a la galería.`);
+        showLocalNotification(
+          '📸 Nueva Foto/Video en Galería',
+          `Se ha publicado un nuevo ${formData.media_type === 'video' ? 'video' : 'contenido'}: ${formData.title}`,
+          '/gallery'
+        );
       }
       setDialogOpen(false);
       fetchMedia();

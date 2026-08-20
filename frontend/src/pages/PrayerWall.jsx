@@ -41,10 +41,13 @@ import {
   Lock as LockIcon,
   Public as PublicIcon,
   PersonOff as AnonymousIcon,
-  FilterList as FilterIcon
+  FilterList as FilterIcon,
+  Person as PersonIcon,
+  Send as SendIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
-import { prayerAPI } from '../services/api';
+import { prayerAPI, userAPI } from '../services/api';
+import { showLocalNotification } from '../services/notificationService';
 
 export default function PrayerWall() {
   const { currentRole, user } = useAuth();
@@ -64,6 +67,24 @@ export default function PrayerWall() {
   const [visibility, setVisibility] = useState('PUBLIC');
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Target User State for Private Prayers
+  const [userList, setUserList] = useState([]);
+  const [selectedTargetUser, setSelectedTargetUser] = useState('');
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+
+  const fetchUsers = async () => {
+    try {
+      const data = await userAPI.getAll();
+      setUserList(data);
+    } catch (e) {
+      console.warn('Error loading users list for prayer targeting:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   // Fetch Prayers
   const fetchPrayers = async () => {
@@ -123,11 +144,13 @@ export default function PrayerWall() {
 
     setSubmitting(true);
     try {
+      const finalVisibility = visibility === 'TARGETED_USER' ? `USER_${selectedTargetUser}` : visibility;
+
       const created = await prayerAPI.create({
         title: newTitle,
         description: newDetail,
         is_anonymous: isAnonymous,
-        visibility: visibility
+        visibility: finalVisibility
       });
 
       setPrayers([created, ...prayers]);
@@ -136,7 +159,31 @@ export default function PrayerWall() {
       setNewDetail('');
       setIsAnonymous(false);
       setVisibility('PUBLIC');
-      setSuccessMessage('Tu petición de oración ha sido publicada correctamente.');
+      setSelectedTargetUser('');
+      setUserSearchQuery('');
+
+      if (finalVisibility === 'PUBLIC') {
+        showLocalNotification(
+          '🙏 Nueva Petición de Oración',
+          `${newTitle} - Publicada por ${isAnonymous ? 'Anónimo' : (user?.full_name || 'un hermano')}`,
+          '/prayers'
+        );
+      } else if (finalVisibility === 'LEADERS') {
+        showLocalNotification(
+          '🔒 Petición Confidencial para Líderes',
+          `${newTitle} - Solicitud de intercesión pastoral`,
+          '/prayers'
+        );
+      } else if (finalVisibility.startsWith('USER_')) {
+        const targetObj = userList.find((u) => u.id.toString() === selectedTargetUser);
+        showLocalNotification(
+          '🔒 Petición Privada enviada',
+          `Petición enviada a ${targetObj?.full_name || 'el miembro seleccionado'}: ${newTitle}`,
+          '/prayers'
+        );
+      }
+
+      setSuccessMessage('Tu petición de oración ha sido registrada con éxito.');
       setTimeout(() => setSuccessMessage(''), 4000);
     } catch (err) {
       console.error('Error al publicar oración:', err);
@@ -445,7 +492,13 @@ export default function PrayerWall() {
                       <MenuItem value="LEADERS">
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <LockIcon fontSize="small" sx={{ color: '#475569' }} />
-                          Confidencial (Solo Líderes)
+                          Confidencial (Solo Líderes y Pastores)
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="TARGETED_USER">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <PersonIcon fontSize="small" sx={{ color: '#059669' }} />
+                          Privada a un Miembro en Particular
                         </Box>
                       </MenuItem>
                     </Select>
@@ -465,6 +518,56 @@ export default function PrayerWall() {
                   />
                 </Grid>
               </Grid>
+
+              {/* Selector de Miembro Específico con Buscador */}
+              {visibility === 'TARGETED_USER' && (
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A', mb: 1 }}>
+                    🎯 Seleccionar Destinatario de la Petición Privada
+                  </Typography>
+
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Buscar hermano o miembro por nombre..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon sx={{ color: '#64748B' }} />
+                        </InputAdornment>
+                      )
+                    }}
+                    sx={{ mb: 1.5 }}
+                  />
+
+                  <FormControl fullWidth size="small" required>
+                    <InputLabel>Seleccionar Persona *</InputLabel>
+                    <Select
+                      value={selectedTargetUser}
+                      label="Seleccionar Persona *"
+                      onChange={(e) => setSelectedTargetUser(e.target.value)}
+                    >
+                      {userList
+                        .filter(
+                          (u) =>
+                            u.full_name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                            u.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+                        )
+                        .map((u) => (
+                          <MenuItem key={u.id} value={u.id.toString()}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <PersonIcon fontSize="small" sx={{ color: '#0284C7' }} />
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>{u.full_name}</Typography>
+                              <Typography variant="caption" sx={{ color: '#64748B' }}>({u.email}) - {u.role}</Typography>
+                            </Box>
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+                </Paper>
+              )}
             </Stack>
           </DialogContent>
 
