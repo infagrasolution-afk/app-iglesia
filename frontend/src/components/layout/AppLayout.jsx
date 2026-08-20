@@ -43,7 +43,7 @@ import {
   NotificationsActive as NotificationIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-import { requestNotificationPermission, getNotificationPermissionState } from '../../services/notificationService';
+import { requestNotificationPermission, getNotificationPermissionState, startBackgroundNotificationSync } from '../../services/notificationService';
 
 const DRAWER_WIDTH = 260;
 
@@ -60,6 +60,12 @@ export default function AppLayout({ children }) {
   const [showNotifPrompt, setShowNotifPrompt] = useState(() => {
     return getNotificationPermissionState() === 'default';
   });
+
+  React.useEffect(() => {
+    if (getNotificationPermissionState() === 'granted') {
+      startBackgroundNotificationSync(user);
+    }
+  }, [user]);
 
   // If rendering login page, render full standalone screen without layout constraints
   if (location.pathname === '/login') {
