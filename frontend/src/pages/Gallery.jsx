@@ -36,13 +36,15 @@ import {
   Delete as DeleteIcon,
   Close as CloseIcon,
   Collections as GalleryIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Audiotrack as MusicIcon,
+  CloudUpload as UploadIcon
 } from '@mui/icons-material';
 import { mediaAPI } from '../services/api';
 import { showLocalNotification } from '../services/notificationService';
 import { useAuth } from '../context/AuthContext';
 
-const CATEGORIES = ['Todos', 'Cultos', 'Eventos', 'Retiros', 'Jóvenes', 'Escuela Dominical'];
+const CATEGORIES = ['Todos', 'Cultos', 'Eventos', 'Retiros', 'Jóvenes', 'Escuela Dominical', 'Alabanzas'];
 
 export default function Gallery() {
   const { currentRole } = useAuth();
@@ -115,6 +117,28 @@ export default function Gallery() {
       category: item.category || 'Eventos'
     });
     setDialogOpen(true);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    let detectedType = 'photo';
+    if (file.type.startsWith('video/')) detectedType = 'video';
+    if (file.type.startsWith('audio/')) detectedType = 'audio';
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      setFormData((prev) => ({
+        ...prev,
+        title: prev.title || file.name.replace(/\.[^/.]+$/, ''),
+        media_type: detectedType,
+        url: dataUrl
+      }));
+      setSuccessMsg(`Archivo "${file.name}" cargado exitosamente desde su dispositivo.`);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveMedia = async (e) => {
@@ -284,61 +308,91 @@ export default function Gallery() {
                 }}
               >
                 {/* Card Media Preview Container */}
-                <Box
-                  sx={{
-                    position: 'relative',
-                    cursor: 'pointer',
-                    overflow: 'hidden',
-                    backgroundColor: '#0F172A',
-                    height: 220
-                  }}
-                  onClick={() => setActiveMedia(item)}
-                >
-                  <CardMedia
-                    component="img"
-                    height="220"
-                    image={item.thumbnail_url || item.url}
-                    alt={item.title}
+                {item.media_type === 'audio' ? (
+                  <Box
                     sx={{
-                      objectFit: 'cover',
-                      opacity: item.media_type === 'video' ? 0.85 : 1,
-                      transition: 'transform 0.3s',
-                      '&:hover': { transform: 'scale(1.05)' }
+                      height: 220,
+                      backgroundColor: '#0F172A',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      p: 2,
+                      position: 'relative'
                     }}
-                  />
-
-                  {/* Type Badge Top Left */}
-                  <Chip
-                    icon={item.media_type === 'video' ? <VideoIcon sx={{ color: '#FFFFFF !important' }} /> : <PhotoIcon sx={{ color: '#FFFFFF !important' }} />}
-                    label={item.media_type === 'video' ? 'Video' : 'Foto'}
-                    size="small"
+                  >
+                    <Chip
+                      icon={<MusicIcon sx={{ color: '#FFFFFF !important' }} />}
+                      label="Alabanza"
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        top: 12,
+                        left: 12,
+                        backgroundColor: '#0284C7',
+                        color: '#FFFFFF',
+                        fontWeight: 600
+                      }}
+                    />
+                    <MusicIcon sx={{ fontSize: 56, color: '#38BDF8', mb: 1.5 }} />
+                    <Box component="audio" controls src={item.url} sx={{ width: '90%', height: 40, outline: 'none' }} />
+                  </Box>
+                ) : (
+                  <Box
                     sx={{
-                      position: 'absolute',
-                      top: 12,
-                      left: 12,
-                      backgroundColor: item.media_type === 'video' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(15, 23, 42, 0.8)',
-                      color: '#FFFFFF',
-                      fontWeight: 600,
-                      backdropFilter: 'blur(4px)'
+                      position: 'relative',
+                      cursor: 'pointer',
+                      overflow: 'hidden',
+                      backgroundColor: '#0F172A',
+                      height: 220
                     }}
-                  />
+                    onClick={() => setActiveMedia(item)}
+                  >
+                    <CardMedia
+                      component="img"
+                      height="220"
+                      image={item.thumbnail_url || item.url}
+                      alt={item.title}
+                      sx={{
+                        objectFit: 'cover',
+                        opacity: item.media_type === 'video' ? 0.85 : 1,
+                        transition: 'transform 0.3s',
+                        '&:hover': { transform: 'scale(1.05)' }
+                      }}
+                    />
 
-                  {/* Category Badge Top Right */}
-                  <Chip
-                    label={item.category}
-                    size="small"
-                    sx={{
-                      position: 'absolute',
-                      top: 12,
-                      right: 12,
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                      color: '#0F172A',
-                      fontWeight: 600
-                    }}
-                  />
+                    {/* Type Badge Top Left */}
+                    <Chip
+                      icon={item.media_type === 'video' ? <VideoIcon sx={{ color: '#FFFFFF !important' }} /> : <PhotoIcon sx={{ color: '#FFFFFF !important' }} />}
+                      label={item.media_type === 'video' ? 'Video' : 'Foto'}
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        top: 12,
+                        left: 12,
+                        backgroundColor: item.media_type === 'video' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(15, 23, 42, 0.8)',
+                        color: '#FFFFFF',
+                        fontWeight: 600,
+                        backdropFilter: 'blur(4px)'
+                      }}
+                    />
 
-                  {/* Play Overlay Icon for Video */}
-                  {item.media_type === 'video' && (
+                    {/* Category Badge Top Right */}
+                    <Chip
+                      label={item.category}
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        top: 12,
+                        right: 12,
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        color: '#0F172A',
+                        fontWeight: 600
+                      }}
+                    />
+
+                    {/* Play Overlay Icon for Video */}
+                    {item.media_type === 'video' && (
                     <Box
                       sx={{
                         position: 'absolute',
@@ -492,8 +546,32 @@ export default function Gallery() {
                   >
                     <MenuItem value="photo">Foto / Imagen 📷</MenuItem>
                     <MenuItem value="video">Video (YouTube / Enlace MP4) 🎥</MenuItem>
+                    <MenuItem value="audio">Canción / Alabanza (Audio MP3) 🎵</MenuItem>
                   </Select>
                 </FormControl>
+              </Grid>
+
+              {/* Botón de Carga Directa desde PC / Teléfono */}
+              <Grid item xs={12}>
+                <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', backgroundColor: '#F8FAFC', border: '1px dashed #0284C7', borderRadius: 3 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', mb: 1 }}>
+                    📁 Subir Archivo desde tu Dispositivo (PC / Móvil)
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    component="label"
+                    startIcon={<UploadIcon />}
+                    sx={{ backgroundColor: '#0284C7', textTransform: 'none', borderRadius: 2, '&:hover': { backgroundColor: '#0369A1' } }}
+                  >
+                    Seleccionar Foto, Video o Audio MP3
+                    <input type="file" hidden accept="image/*,video/*,audio/*" onChange={handleFileUpload} />
+                  </Button>
+                  {formData.url.startsWith('data:') && (
+                    <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#059669', fontWeight: 600 }}>
+                      ✓ Archivo cargado correctamente desde su equipo.
+                    </Typography>
+                  )}
+                </Paper>
               </Grid>
 
               <Grid item xs={12} sm={6}>

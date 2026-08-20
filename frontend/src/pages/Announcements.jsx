@@ -33,7 +33,11 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Event as EventIcon,
+  AccessTime as TimeIcon,
+  Place as LocationIcon,
+  CalendarMonth as CalendarIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { announcementAPI } from '../services/api';
@@ -54,9 +58,41 @@ export default function Announcements() {
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('Avisos Generales');
   const [isImportant, setIsImportant] = useState(false);
+  const [eventDate, setEventDate] = useState('');
+  const [eventTime, setEventTime] = useState('');
+  const [location, setLocation] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  const downloadICSFile = (eventTitle, eventContent, dateStr, timeStr, locationStr) => {
+    const startDate = dateStr ? new Date(`${dateStr}T${timeStr || '09:00'}:00`) : new Date();
+    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+    const formatDateStr = (d) => d.toISOString().replace(/-|:|\.\d\d\d/g, "");
+
+    const icsData = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Iglesia Restauracion//PWA//ES',
+      'BEGIN:VEVENT',
+      `SUMMARY:⛪ ${eventTitle}`,
+      `DESCRIPTION:${eventContent ? eventContent.replace(/\n/g, ' ') : 'Actividad de la Iglesia Restauración'}`,
+      `LOCATION:${locationStr || 'Iglesia Restauración'}`,
+      `DTSTART:${formatDateStr(startDate)}`,
+      `DTEND:${formatDateStr(endDate)}`,
+      'STATUS:CONFIRMED',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+
+    const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', `${eventTitle.replace(/\s+/g, '_')}_Evento.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const fetchAnnouncements = async () => {
     setLoading(true);
@@ -81,6 +117,9 @@ export default function Announcements() {
     setContent('');
     setCategory('Avisos Generales');
     setIsImportant(false);
+    setEventDate('');
+    setEventTime('');
+    setLocation('');
     setOpenModal(true);
   };
 
@@ -90,6 +129,9 @@ export default function Announcements() {
     setContent(ann.content || '');
     setCategory(ann.category || 'Avisos Generales');
     setIsImportant(Boolean(ann.is_important));
+    setEventDate(ann.event_date || '');
+    setEventTime(ann.event_time || '');
+    setLocation(ann.location || '');
     setOpenModal(true);
   };
 
@@ -98,23 +140,23 @@ export default function Announcements() {
     setSubmitting(true);
     setErrorMsg('');
     try {
+      const payload = {
+        title,
+        content,
+        category,
+        is_important: isImportant,
+        event_date: eventDate,
+        event_time: eventTime,
+        location: location
+      };
+
       if (editingItem) {
-        await announcementAPI.update(editingItem.id, {
-          title,
-          content,
-          category,
-          is_important: isImportant
-        });
+        await announcementAPI.update(editingItem.id, payload);
         setSuccessMsg('Anuncio actualizado exitosamente.');
       } else {
-        await announcementAPI.create({
-          title,
-          content,
-          category,
-          is_important: isImportant
-        });
+        await announcementAPI.create(payload);
         setSuccessMsg('Anuncio publicado en el boletín digital.');
-        showLocalNotification('📢 Nuevo Anuncio de la Iglesia', `${title} (${category})`, '/announcements');
+        showLocalNotification('📢 Nuevo Anuncio / Evento de la Iglesia', `${title} ${eventDate ? '📅 (' + eventDate + ')' : ''}`, '/announcements');
       }
       setOpenModal(false);
       fetchAnnouncements();
@@ -256,6 +298,43 @@ export default function Announcements() {
                   <Typography variant="body1" sx={{ color: '#334155', lineHeight: 1.6 }}>
                     {ann.content}
                   </Typography>
+
+                  {/* Event Date & Location Info Chips */}
+                  {(ann.event_date || ann.location) && (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, my: 1.5, pt: 1.5, borderTop: '1px dashed #E2E8F0' }}>
+                      {ann.event_date && (
+                        <Chip
+                          icon={<EventIcon fontSize="small" sx={{ color: '#0284C7 !important' }} />}
+                          label={`Fecha: ${ann.event_date}${ann.event_time ? ' (' + ann.event_time + ')' : ''}`}
+                          variant="outlined"
+                          size="small"
+                          sx={{ borderColor: '#0284C7', color: '#0F172A', fontWeight: 600 }}
+                        />
+                      )}
+                      {ann.location && (
+                        <Chip
+                          icon={<LocationIcon fontSize="small" sx={{ color: '#059669 !important' }} />}
+                          label={`Lugar: ${ann.location}`}
+                          variant="outlined"
+                          size="small"
+                          sx={{ borderColor: '#059669', color: '#0F172A', fontWeight: 600 }}
+                        />
+                      )}
+                    </Box>
+                  )}
+
+                  {/* Add to Calendar Button */}
+                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-start' }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<CalendarIcon sx={{ color: '#0F172A' }} />}
+                      onClick={() => downloadICSFile(ann.title, ann.content, ann.event_date, ann.event_time, ann.location)}
+                      sx={{ textTransform: 'none', borderRadius: 2, borderColor: '#CBD5E1', color: '#0F172A', fontWeight: 600, '&:hover': { borderColor: '#0F172A', backgroundColor: '#F8FAFC' } }}
+                    >
+                      Añadir a mi Calendario del Teléfono
+                    </Button>
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>
@@ -308,6 +387,37 @@ export default function Announcements() {
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Escriba el comunicado detallado aquí..."
               />
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    label="Fecha del Evento (Opcional)"
+                    InputLabelProps={{ shrink: true }}
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    type="time"
+                    label="Hora del Evento (Opcional)"
+                    InputLabelProps={{ shrink: true }}
+                    value={eventTime}
+                    onChange={(e) => setEventTime(e.target.value)}
+                  />
+                </Grid>
+              </Grid>
+
+              <TextField
+                fullWidth
+                label="Lugar / Ubicación del Evento (Opcional)"
+                placeholder="ej. Santuario Principal / Zoom"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+
               <FormControl fullWidth>
                 <InputLabel>Categoría</InputLabel>
                 <Select
