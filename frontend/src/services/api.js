@@ -45,6 +45,12 @@ export const authAPI = {
   },
   getMe: async () => {
     return await fetchAPI('/auth/me');
+  },
+  resetPassword: async (username, phone, new_password) => {
+    return await fetchAPI('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ username, phone, new_password })
+    });
   }
 };
 

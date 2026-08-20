@@ -40,3 +40,20 @@ def login(login_data: schemas.LoginRequest):
 def get_me(current_user: dict = Depends(security.get_current_user)):
     return {k: v for k, v in current_user.items() if k != "hashed_password"}
 
+@router.post("/reset-password")
+def reset_password(reset_data: schemas.PasswordResetRequest):
+    user = UserJSONDB.get_by_email(reset_data.username)
+    if not user:
+        raise HTTPException(status_code=404, detail="El usuario ingresado no se encuentra registrado.")
+    
+    user_phone_clean = "".join(filter(str.isdigit, user.get("phone", "")))
+    req_phone_clean = "".join(filter(str.isdigit, reset_data.phone))
+    
+    if not req_phone_clean or (req_phone_clean not in user_phone_clean and user_phone_clean not in req_phone_clean):
+        raise HTTPException(status_code=400, detail="El número de teléfono ingresado no coincide con el registrado en su cuenta.")
+    
+    new_pwd = reset_data.new_password if reset_data.new_password and reset_data.new_password.strip() else "123456"
+    UserJSONDB.update(user["id"], {"password": new_pwd})
+    
+    return {"message": "Su contraseña ha sido restablecida con éxito. Ya puede iniciar sesión."}
+

@@ -39,6 +39,11 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class PasswordResetRequest(BaseModel):
+    username: str
+    phone: str
+    new_password: Optional[str] = "123456"
+
 # Prayer Schemas
 class PrayerCreate(BaseModel):
     title: str
