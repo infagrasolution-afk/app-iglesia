@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "title": "properidad y union familiar",
+    "description": "por paz, tranquilidad de la familia",
+    "author_id": 2,
+    "author_name": "Luis Garcia",
+    "is_anonymous": false,
+    "visibility": "PUBLIC",
+    "status": "answered",
+    "prayer_count": 2,
+    "created_at": "2026-08-20T11:08:30.049223"
+  }
+]

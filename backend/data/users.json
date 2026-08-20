@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "email": "Linfante",
+    "full_name": "Pastor Luis Infante",
+    "hashed_password": "$2b$12$8FqcPNzRtZLyTCRdTh/ZJ.DOwHJwHxtWvLjxuB0QK0rQbaoopfiUe",
+    "role": "ADMIN",
+    "phone": "+58 414 1234567",
+    "status": "Activo",
+    "created_at": "2026-08-20T09:52:43.545348"
+  },
+  {
+    "id": 2,
+    "email": "LGarcia",
+    "full_name": "Luis Garcia",
+    "hashed_password": "$2b$12$TZHpg6oRu9Rr7prZ.erhBetb7AZz5Zc0GSYVK3Bh88rfuys14X38m",
+    "role": "MIEMBRO",
+    "phone": "+58 4120161906",
+    "status": "Activo",
+    "created_at": "2026-08-20T10:30:57.434514"
+  },
+  {
+    "id": 3,
+    "email": "KVilera",
+    "full_name": "Karla Vilera",
+    "hashed_password": "$2b$12$dGg6elc/8My0DXiwtvCIcObjVGWYjoWk8BaMf7JpI4.Ol12prCvHa",
+    "role": "MIEMBRO",
+    "phone": "+58 4143810384",
+    "status": "Activo",
+    "created_at": "2026-08-20T10:33:24.855822"
+  }
+]
