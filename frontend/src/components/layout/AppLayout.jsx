@@ -54,13 +54,9 @@ export default function AppLayout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [roleAnchorEl, setRoleAnchorEl] = useState(null);
 
-  // If rendering login page, render full standalone screen without sidebar or header
+  // If rendering login page, render full standalone screen without layout constraints
   if (location.pathname === '/login') {
-    return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {children}
-      </Box>
-    );
+    return children;
   }
 
   const handleDrawerToggle = () => {
