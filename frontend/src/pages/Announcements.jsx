@@ -39,7 +39,8 @@ import {
   Place as LocationIcon,
   CalendarMonth as CalendarIcon,
   VideoCameraFront as VideoCallIcon,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Repeat as RepeatIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { announcementAPI } from '../services/api';
@@ -64,18 +65,26 @@ export default function Announcements() {
   const [eventTime, setEventTime] = useState('');
   const [location, setLocation] = useState('');
   const [meetingUrl, setMeetingUrl] = useState('');
+  const [frequency, setFrequency] = useState('one_time');
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const downloadICSFile = (eventTitle, eventContent, dateStr, timeStr, locationStr, meetingUrlStr) => {
+  const downloadICSFile = (eventTitle, eventContent, dateStr, timeStr, locationStr, meetingUrlStr, freqStr) => {
     const startDate = dateStr ? new Date(`${dateStr}T${timeStr || '09:00'}:00`) : new Date();
     const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
     const formatDateStr = (d) => d.toISOString().replace(/-|:|\.\d\d\d/g, "");
 
     const fullDesc = `${eventContent ? eventContent.replace(/\n/g, ' ') : 'Actividad de la Iglesia Restauración'}${meetingUrlStr ? ' Enlace Online: ' + meetingUrlStr : ''}`;
 
-    const icsData = [
+    const rruleMap = {
+      daily: 'RRULE:FREQ=DAILY',
+      weekly: 'RRULE:FREQ=WEEKLY',
+      monthly: 'RRULE:FREQ=MONTHLY',
+      yearly: 'RRULE:FREQ=YEARLY'
+    };
+
+    const icsLines = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
       'PRODID:-//Iglesia Restauracion//PWA//ES',
@@ -85,13 +94,16 @@ export default function Announcements() {
       `LOCATION:${locationStr || (meetingUrlStr ? 'Reunión Virtual' : 'Iglesia Restauración')}`,
       `URL:${meetingUrlStr || ''}`,
       `DTSTART:${formatDateStr(startDate)}`,
-      `DTEND:${formatDateStr(endDate)}`,
-      'STATUS:CONFIRMED',
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].join('\r\n');
+      `DTEND:${formatDateStr(endDate)}`
+    ];
 
-    const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
+    if (freqStr && rruleMap[freqStr]) {
+      icsLines.push(rruleMap[freqStr]);
+    }
+
+    icsLines.push('STATUS:CONFIRMED', 'END:VEVENT', 'END:VCALENDAR');
+
+    const blob = new Blob([icsLines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
     link.setAttribute('download', `${eventTitle.replace(/\s+/g, '_')}_Evento.ics`);
@@ -127,6 +139,7 @@ export default function Announcements() {
     setEventTime('');
     setLocation('');
     setMeetingUrl('');
+    setFrequency('one_time');
     setOpenModal(true);
   };
 
@@ -140,6 +153,7 @@ export default function Announcements() {
     setEventTime(ann.event_time || '');
     setLocation(ann.location || '');
     setMeetingUrl(ann.meeting_url || '');
+    setFrequency(ann.frequency || 'one_time');
     setOpenModal(true);
   };
 
@@ -156,7 +170,8 @@ export default function Announcements() {
         event_date: eventDate,
         event_time: eventTime,
         location: location,
-        meeting_url: meetingUrl
+        meeting_url: meetingUrl,
+        frequency: frequency
       };
 
       if (editingItem) {
@@ -308,8 +323,8 @@ export default function Announcements() {
                     {ann.content}
                   </Typography>
 
-                  {/* Event Date & Location Info Chips */}
-                  {(ann.event_date || ann.location) && (
+                  {/* Event Date, Location & Frequency Info Chips */}
+                  {(ann.event_date || ann.location || (ann.frequency && ann.frequency !== 'one_time')) && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, my: 1.5, pt: 1.5, borderTop: '1px dashed #E2E8F0' }}>
                       {ann.event_date && (
                         <Chip
@@ -329,6 +344,20 @@ export default function Announcements() {
                           sx={{ borderColor: '#059669', color: '#0F172A', fontWeight: 600 }}
                         />
                       )}
+                      {ann.frequency && ann.frequency !== 'one_time' && (
+                        <Chip
+                          icon={<RepeatIcon fontSize="small" sx={{ color: '#7C3AED !important' }} />}
+                          label={`Repetición: ${
+                            ann.frequency === 'daily' ? 'Diaria' :
+                            ann.frequency === 'weekly' ? 'Semanal' :
+                            ann.frequency === 'monthly' ? 'Mensual' :
+                            ann.frequency === 'yearly' ? 'Anual' : ann.frequency
+                          }`}
+                          variant="outlined"
+                          size="small"
+                          sx={{ borderColor: '#7C3AED', color: '#0F172A', fontWeight: 600 }}
+                        />
+                      )}
                     </Box>
                   )}
 
@@ -338,7 +367,7 @@ export default function Announcements() {
                       variant="outlined"
                       size="small"
                       startIcon={<CalendarIcon sx={{ color: '#0F172A' }} />}
-                      onClick={() => downloadICSFile(ann.title, ann.content, ann.event_date, ann.event_time, ann.location, ann.meeting_url)}
+                      onClick={() => downloadICSFile(ann.title, ann.content, ann.event_date, ann.event_time, ann.location, ann.meeting_url, ann.frequency)}
                       sx={{ textTransform: 'none', borderRadius: 2, borderColor: '#CBD5E1', color: '#0F172A', fontWeight: 600, '&:hover': { borderColor: '#0F172A', backgroundColor: '#F8FAFC' } }}
                     >
                       Añadir a mi Calendario del Teléfono
@@ -457,18 +486,39 @@ export default function Announcements() {
                 onChange={(e) => setMeetingUrl(e.target.value)}
               />
 
-              <FormControl fullWidth>
-                <InputLabel>Categoría</InputLabel>
-                <Select
-                  value={category}
-                  label="Categoría"
-                  onChange={(e) => setCategory(e.target.value)}
-                >
-                  <MenuItem value="Eventos">Eventos y Convocatorias</MenuItem>
-                  <MenuItem value="Ayunos">Ayunos y Clamores</MenuItem>
-                  <MenuItem value="Avisos Generales">Avisos Generales</MenuItem>
-                </Select>
-              </FormControl>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Categoría</InputLabel>
+                    <Select
+                      value={category}
+                      label="Categoría"
+                      onChange={(e) => setCategory(e.target.value)}
+                    >
+                      <MenuItem value="Eventos">Eventos y Convocatorias</MenuItem>
+                      <MenuItem value="Ayunos">Ayunos y Clamores</MenuItem>
+                      <MenuItem value="Avisos Generales">Avisos Generales</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Frecuencia de Repetición</InputLabel>
+                    <Select
+                      value={frequency}
+                      label="Frecuencia de Repetición"
+                      onChange={(e) => setFrequency(e.target.value)}
+                    >
+                      <MenuItem value="one_time">Único (Una sola vez)</MenuItem>
+                      <MenuItem value="daily">Diario (Todos los días)</MenuItem>
+                      <MenuItem value="weekly">Semanal (Todas las semanas)</MenuItem>
+                      <MenuItem value="monthly">Mensual (Todos los meses)</MenuItem>
+                      <MenuItem value="yearly">Anual (Todos los años)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
               <FormControlLabel
                 control={<Switch checked={isImportant} onChange={(e) => setIsImportant(e.target.checked)} />}
                 label="Marcar como Anuncio Importante / Destacado"
