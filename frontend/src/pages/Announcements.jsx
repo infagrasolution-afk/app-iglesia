@@ -46,6 +46,16 @@ import { useAuth } from '../context/AuthContext';
 import { announcementAPI } from '../services/api';
 import { showLocalNotification } from '../services/notificationService';
 
+const WEEK_DAYS = [
+  { code: 'MO', label: 'Lun', full: 'Lunes' },
+  { code: 'TU', label: 'Mar', full: 'Martes' },
+  { code: 'WE', label: 'Mié', full: 'Miércoles' },
+  { code: 'TH', label: 'Jue', full: 'Jueves' },
+  { code: 'FR', label: 'Vie', full: 'Viernes' },
+  { code: 'SA', label: 'Sáb', full: 'Sábado' },
+  { code: 'SU', label: 'Dom', full: 'Domingo' }
+];
+
 export default function Announcements() {
   const { currentRole } = useAuth();
   const isPastorOrAdmin = currentRole === 'ADMIN' || currentRole === 'PASTOR';
@@ -66,11 +76,18 @@ export default function Announcements() {
   const [location, setLocation] = useState('');
   const [meetingUrl, setMeetingUrl] = useState('');
   const [frequency, setFrequency] = useState('one_time');
+  const [weeklyDays, setWeeklyDays] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const downloadICSFile = (eventTitle, eventContent, dateStr, timeStr, locationStr, meetingUrlStr, freqStr) => {
+  const handleToggleWeeklyDay = (dayCode) => {
+    setWeeklyDays((prev) =>
+      prev.includes(dayCode) ? prev.filter((d) => d !== dayCode) : [...prev, dayCode]
+    );
+  };
+
+  const downloadICSFile = (eventTitle, eventContent, dateStr, timeStr, locationStr, meetingUrlStr, freqStr, daysArr) => {
     const startDate = dateStr ? new Date(`${dateStr}T${timeStr || '09:00'}:00`) : new Date();
     const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
     const formatDateStr = (d) => d.toISOString().replace(/-|:|\.\d\d\d/g, "");
@@ -79,7 +96,7 @@ export default function Announcements() {
 
     const rruleMap = {
       daily: 'RRULE:FREQ=DAILY',
-      weekly: 'RRULE:FREQ=WEEKLY',
+      weekly: daysArr && daysArr.length > 0 ? `RRULE:FREQ=WEEKLY;BYDAY=${daysArr.join(',')}` : 'RRULE:FREQ=WEEKLY',
       monthly: 'RRULE:FREQ=MONTHLY',
       yearly: 'RRULE:FREQ=YEARLY'
     };
@@ -140,6 +157,7 @@ export default function Announcements() {
     setLocation('');
     setMeetingUrl('');
     setFrequency('one_time');
+    setWeeklyDays([]);
     setOpenModal(true);
   };
 
@@ -154,6 +172,7 @@ export default function Announcements() {
     setLocation(ann.location || '');
     setMeetingUrl(ann.meeting_url || '');
     setFrequency(ann.frequency || 'one_time');
+    setWeeklyDays(ann.weekly_days || []);
     setOpenModal(true);
   };
 
@@ -171,7 +190,8 @@ export default function Announcements() {
         event_time: eventTime,
         location: location,
         meeting_url: meetingUrl,
-        frequency: frequency
+        frequency: frequency,
+        weekly_days: frequency === 'weekly' ? weeklyDays : []
       };
 
       if (editingItem) {
@@ -349,7 +369,7 @@ export default function Announcements() {
                           icon={<RepeatIcon fontSize="small" sx={{ color: '#7C3AED !important' }} />}
                           label={`Repetición: ${
                             ann.frequency === 'daily' ? 'Diaria' :
-                            ann.frequency === 'weekly' ? 'Semanal' :
+                            ann.frequency === 'weekly' ? `Semanal (${(ann.weekly_days || []).map(d => WEEK_DAYS.find(w => w.code === d)?.full || d).join(', ') || 'Días fijados'})` :
                             ann.frequency === 'monthly' ? 'Mensual' :
                             ann.frequency === 'yearly' ? 'Anual' : ann.frequency
                           }`}
@@ -367,7 +387,7 @@ export default function Announcements() {
                       variant="outlined"
                       size="small"
                       startIcon={<CalendarIcon sx={{ color: '#0F172A' }} />}
-                      onClick={() => downloadICSFile(ann.title, ann.content, ann.event_date, ann.event_time, ann.location, ann.meeting_url, ann.frequency)}
+                      onClick={() => downloadICSFile(ann.title, ann.content, ann.event_date, ann.event_time, ann.location, ann.meeting_url, ann.frequency, ann.weekly_days)}
                       sx={{ textTransform: 'none', borderRadius: 2, borderColor: '#CBD5E1', color: '#0F172A', fontWeight: 600, '&:hover': { borderColor: '#0F172A', backgroundColor: '#F8FAFC' } }}
                     >
                       Añadir a mi Calendario del Teléfono
@@ -512,13 +532,46 @@ export default function Announcements() {
                     >
                       <MenuItem value="one_time">Único (Una sola vez)</MenuItem>
                       <MenuItem value="daily">Diario (Todos los días)</MenuItem>
-                      <MenuItem value="weekly">Semanal (Todas las semanas)</MenuItem>
+                      <MenuItem value="weekly">Semanal (Días específicos)</MenuItem>
                       <MenuItem value="monthly">Mensual (Todos los meses)</MenuItem>
                       <MenuItem value="yearly">Anual (Todos los años)</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
               </Grid>
+
+              {/* Selector de Días de la Semana cuando Frecuencia es Semanal */}
+              {frequency === 'weekly' && (
+                <Paper variant="outlined" sx={{ p: 2, backgroundColor: '#F8FAFC', borderRadius: 3, borderColor: '#CBD5E1' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A', mb: 1.5 }}>
+                    📅 Seleccione los días de la semana en que se repite:
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {WEEK_DAYS.map((day) => {
+                      const isSelected = weeklyDays.includes(day.code);
+                      return (
+                        <Chip
+                          key={day.code}
+                          label={day.full}
+                          clickable
+                          onClick={() => handleToggleWeeklyDay(day.code)}
+                          sx={{
+                            fontWeight: isSelected ? 700 : 500,
+                            backgroundColor: isSelected ? '#0284C7' : '#FFFFFF',
+                            color: isSelected ? '#FFFFFF' : '#475569',
+                            borderColor: isSelected ? '#0284C7' : '#CBD5E1',
+                            borderWidth: 1,
+                            borderStyle: 'solid',
+                            '&:hover': {
+                              backgroundColor: isSelected ? '#0369A1' : '#F1F5F9'
+                            }
+                          }}
+                        />
+                      );
+                    })}
+                  </Stack>
+                </Paper>
+              )}
               <FormControlLabel
                 control={<Switch checked={isImportant} onChange={(e) => setIsImportant(e.target.checked)} />}
                 label="Marcar como Anuncio Importante / Destacado"
