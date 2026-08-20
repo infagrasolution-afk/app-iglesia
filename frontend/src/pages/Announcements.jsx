@@ -531,10 +531,8 @@ export default function Announcements() {
                       onChange={(e) => setFrequency(e.target.value)}
                     >
                       <MenuItem value="one_time">Único (Una sola vez)</MenuItem>
-                      <MenuItem value="daily">Diario (Todos los días)</MenuItem>
                       <MenuItem value="weekly">Semanal (Días específicos)</MenuItem>
                       <MenuItem value="monthly">Mensual (Todos los meses)</MenuItem>
-                      <MenuItem value="yearly">Anual (Todos los años)</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
