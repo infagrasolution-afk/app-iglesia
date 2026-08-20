@@ -414,8 +414,8 @@ export default function Gallery() {
                     >
                       <PlayIcon sx={{ fontSize: 38, color: '#38BDF8' }} />
                     </Box>
-                  )}
-                </Box>
+                  </Box>
+                )}
 
                 {/* Content */}
                 <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
