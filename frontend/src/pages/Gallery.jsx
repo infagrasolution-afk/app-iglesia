@@ -393,27 +393,28 @@ export default function Gallery() {
 
                     {/* Play Overlay Icon for Video */}
                     {item.media_type === 'video' && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        color: '#FFFFFF',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 56,
-                        height: 56,
-                        borderRadius: '50%',
-                        backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                        transition: 'transform 0.2s',
-                        '&:hover': { transform: 'translate(-50%, -50%) scale(1.1)' }
-                      }}
-                    >
-                      <PlayIcon sx={{ fontSize: 38, color: '#38BDF8' }} />
-                    </Box>
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          color: '#FFFFFF',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 56,
+                          height: 56,
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                          transition: 'transform 0.2s',
+                          '&:hover': { transform: 'translate(-50%, -50%) scale(1.1)' }
+                        }}
+                      >
+                        <PlayIcon sx={{ fontSize: 38, color: '#38BDF8' }} />
+                      </Box>
+                    )}
                   </Box>
                 )}
 
