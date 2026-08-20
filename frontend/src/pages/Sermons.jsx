@@ -31,7 +31,8 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
-  Podcasts as SermonIcon
+  Podcasts as SermonIcon,
+  CloudUpload as UploadIcon
 } from '@mui/icons-material';
 import { sermonAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -103,6 +104,27 @@ export default function Sermons() {
       pdf_url: item.pdf_url || ''
     });
     setDialogOpen(true);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      const fileTitle = file.name.replace(/\.[^/.]+$/, '');
+      const isVideo = file.type.startsWith('video/');
+
+      setFormData((prev) => ({
+        ...prev,
+        title: prev.title || fileTitle,
+        audio_url: isVideo ? prev.audio_url : dataUrl,
+        video_url: isVideo ? dataUrl : prev.video_url
+      }));
+      setSuccessMsg(`Archivo "${file.name}" cargado exitosamente desde su dispositivo.`);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveSermon = async (e) => {
@@ -351,6 +373,29 @@ export default function Sermons() {
                   value={formData.speaker}
                   onChange={(e) => setFormData({ ...formData, speaker: e.target.value })}
                 />
+              </Grid>
+
+              {/* Botón de Carga Directa desde PC / Teléfono */}
+              <Grid item xs={12}>
+                <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', backgroundColor: '#F8FAFC', border: '1px dashed #0284C7', borderRadius: 3 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', mb: 1 }}>
+                    📁 Subir Archivo de Audio MP3 o Video desde tu Dispositivo (PC / Móvil)
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    component="label"
+                    startIcon={<UploadIcon />}
+                    sx={{ backgroundColor: '#0284C7', textTransform: 'none', borderRadius: 2, '&:hover': { backgroundColor: '#0369A1' } }}
+                  >
+                    Seleccionar Audio MP3 o Video de la Prédica
+                    <input type="file" hidden accept="audio/*,video/*" onChange={handleFileUpload} />
+                  </Button>
+                  {((formData.audio_url && formData.audio_url.startsWith('data:')) || (formData.video_url && formData.video_url.startsWith('data:'))) && (
+                    <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#059669', fontWeight: 600 }}>
+                      ✓ Archivo multimedia cargado correctamente desde su equipo.
+                    </Typography>
+                  )}
+                </Paper>
               </Grid>
 
               <Grid item xs={12}>
