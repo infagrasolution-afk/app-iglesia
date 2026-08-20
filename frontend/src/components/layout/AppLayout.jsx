@@ -23,7 +23,8 @@ import {
   useMediaQuery,
   useTheme,
   Tooltip,
-  Button
+  Button,
+  Alert
 } from '@mui/material';
 import {
   VolunteerActivism as PrayerIcon,
@@ -38,9 +39,11 @@ import {
   Logout as LogoutIcon,
   Login as LoginIcon,
   Shield as PastorIcon,
-  Collections as GalleryIcon
+  Collections as GalleryIcon,
+  NotificationsActive as NotificationIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import { requestNotificationPermission, getNotificationPermissionState } from '../../services/notificationService';
 
 const DRAWER_WIDTH = 260;
 
@@ -53,6 +56,10 @@ export default function AppLayout({ children }) {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [roleAnchorEl, setRoleAnchorEl] = useState(null);
+
+  const [showNotifPrompt, setShowNotifPrompt] = useState(() => {
+    return getNotificationPermissionState() === 'default';
+  });
 
   // If rendering login page, render full standalone screen without layout constraints
   if (location.pathname === '/login') {
@@ -339,6 +346,38 @@ export default function AppLayout({ children }) {
         }}
       >
         <Container maxWidth="lg" sx={{ p: 0 }}>
+          {showNotifPrompt && (
+            <Alert
+              severity="info"
+              icon={<NotificationIcon sx={{ color: '#0284C7' }} />}
+              onClose={() => setShowNotifPrompt(false)}
+              action={
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={async () => {
+                    await requestNotificationPermission();
+                    setShowNotifPrompt(false);
+                  }}
+                  sx={{
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    backgroundColor: '#0284C7',
+                    color: '#FFFFFF',
+                    borderRadius: 2,
+                    '&:hover': { backgroundColor: '#0369A1' }
+                  }}
+                >
+                  Activar
+                </Button>
+              }
+              sx={{ mb: 2.5, borderRadius: 3, border: '1px solid #BAE6FD', backgroundColor: '#F0F9FF', color: '#0369A1', alignItems: 'center' }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 600, color: '#0369A1' }}>
+                🔔 ¿Deseas recibir notificaciones de eventos y anuncios de la Iglesia en tu teléfono?
+              </Typography>
+            </Alert>
+          )}
           {children}
         </Container>
       </Box>

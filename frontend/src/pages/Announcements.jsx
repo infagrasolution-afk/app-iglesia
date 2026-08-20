@@ -37,6 +37,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { announcementAPI } from '../services/api';
+import { showLocalNotification } from '../services/notificationService';
 
 export default function Announcements() {
   const { currentRole } = useAuth();
@@ -113,6 +114,7 @@ export default function Announcements() {
           is_important: isImportant
         });
         setSuccessMsg('Anuncio publicado en el boletín digital.');
+        showLocalNotification('📢 Nuevo Anuncio de la Iglesia', `${title} (${category})`, '/announcements');
       }
       setOpenModal(false);
       fetchAnnouncements();
