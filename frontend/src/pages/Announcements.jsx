@@ -37,7 +37,9 @@ import {
   Event as EventIcon,
   AccessTime as TimeIcon,
   Place as LocationIcon,
-  CalendarMonth as CalendarIcon
+  CalendarMonth as CalendarIcon,
+  VideoCameraFront as VideoCallIcon,
+  Link as LinkIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { announcementAPI } from '../services/api';
@@ -61,14 +63,17 @@ export default function Announcements() {
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [location, setLocation] = useState('');
+  const [meetingUrl, setMeetingUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const downloadICSFile = (eventTitle, eventContent, dateStr, timeStr, locationStr) => {
+  const downloadICSFile = (eventTitle, eventContent, dateStr, timeStr, locationStr, meetingUrlStr) => {
     const startDate = dateStr ? new Date(`${dateStr}T${timeStr || '09:00'}:00`) : new Date();
     const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
     const formatDateStr = (d) => d.toISOString().replace(/-|:|\.\d\d\d/g, "");
+
+    const fullDesc = `${eventContent ? eventContent.replace(/\n/g, ' ') : 'Actividad de la Iglesia Restauración'}${meetingUrlStr ? ' Enlace Online: ' + meetingUrlStr : ''}`;
 
     const icsData = [
       'BEGIN:VCALENDAR',
@@ -76,8 +81,9 @@ export default function Announcements() {
       'PRODID:-//Iglesia Restauracion//PWA//ES',
       'BEGIN:VEVENT',
       `SUMMARY:⛪ ${eventTitle}`,
-      `DESCRIPTION:${eventContent ? eventContent.replace(/\n/g, ' ') : 'Actividad de la Iglesia Restauración'}`,
-      `LOCATION:${locationStr || 'Iglesia Restauración'}`,
+      `DESCRIPTION:${fullDesc}`,
+      `LOCATION:${locationStr || (meetingUrlStr ? 'Reunión Virtual' : 'Iglesia Restauración')}`,
+      `URL:${meetingUrlStr || ''}`,
       `DTSTART:${formatDateStr(startDate)}`,
       `DTEND:${formatDateStr(endDate)}`,
       'STATUS:CONFIRMED',
@@ -120,6 +126,7 @@ export default function Announcements() {
     setEventDate('');
     setEventTime('');
     setLocation('');
+    setMeetingUrl('');
     setOpenModal(true);
   };
 
@@ -132,6 +139,7 @@ export default function Announcements() {
     setEventDate(ann.event_date || '');
     setEventTime(ann.event_time || '');
     setLocation(ann.location || '');
+    setMeetingUrl(ann.meeting_url || '');
     setOpenModal(true);
   };
 
@@ -147,7 +155,8 @@ export default function Announcements() {
         is_important: isImportant,
         event_date: eventDate,
         event_time: eventTime,
-        location: location
+        location: location,
+        meeting_url: meetingUrl
       };
 
       if (editingItem) {
@@ -323,17 +332,39 @@ export default function Announcements() {
                     </Box>
                   )}
 
-                  {/* Add to Calendar Button */}
-                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-start' }}>
+                  {/* Add to Calendar & Join Meeting Buttons */}
+                  <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
                     <Button
                       variant="outlined"
                       size="small"
                       startIcon={<CalendarIcon sx={{ color: '#0F172A' }} />}
-                      onClick={() => downloadICSFile(ann.title, ann.content, ann.event_date, ann.event_time, ann.location)}
+                      onClick={() => downloadICSFile(ann.title, ann.content, ann.event_date, ann.event_time, ann.location, ann.meeting_url)}
                       sx={{ textTransform: 'none', borderRadius: 2, borderColor: '#CBD5E1', color: '#0F172A', fontWeight: 600, '&:hover': { borderColor: '#0F172A', backgroundColor: '#F8FAFC' } }}
                     >
                       Añadir a mi Calendario del Teléfono
                     </Button>
+
+                    {ann.meeting_url && (
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<VideoCallIcon />}
+                        href={ann.meeting_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{
+                          backgroundColor: '#0284C7',
+                          color: '#FFFFFF',
+                          fontWeight: 700,
+                          textTransform: 'none',
+                          borderRadius: 2,
+                          boxShadow: '0 4px 10px rgba(2, 132, 199, 0.3)',
+                          '&:hover': { backgroundColor: '#0369A1' }
+                        }}
+                      >
+                        🎥 Unirse a la Reunión / Transmisión Online
+                      </Button>
+                    )}
                   </Box>
                 </CardContent>
               </Card>
@@ -416,6 +447,14 @@ export default function Announcements() {
                 placeholder="ej. Santuario Principal / Zoom"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
+              />
+
+              <TextField
+                fullWidth
+                label="Enlace / URL de la Reunión Online (Opcional)"
+                placeholder="ej. https://zoom.us/j/... o https://meet.google.com/..."
+                value={meetingUrl}
+                onChange={(e) => setMeetingUrl(e.target.value)}
               />
 
               <FormControl fullWidth>
