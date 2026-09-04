@@ -22,9 +22,7 @@ import {
   Divider,
   useMediaQuery,
   useTheme,
-  Tooltip,
-  Button,
-  Alert
+  Tooltip
 } from '@mui/material';
 import {
   VolunteerActivism as PrayerIcon,
@@ -33,44 +31,32 @@ import {
   Favorite as DonationIcon,
   AccountCircle as UserIcon,
   Menu as MenuIcon,
+  Church as ChurchIcon,
   ExpandMore as ExpandMoreIcon,
   MenuBook as BibleIcon,
-  AdminPanelSettings as AdminIcon,
-  Logout as LogoutIcon,
-  Login as LoginIcon,
-  Shield as PastorIcon,
-  Collections as GalleryIcon,
-  NotificationsActive as NotificationIcon
+  Logout as LogoutIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-import { requestNotificationPermission, getNotificationPermissionState, startBackgroundNotificationSync } from '../../services/notificationService';
 
 const DRAWER_WIDTH = 260;
+
+const NAV_ITEMS = [
+  { label: 'Muro de Oración', path: '/prayers', icon: <PrayerIcon /> },
+  { label: 'Santa Biblia (RVR1960)', path: '/bible', icon: <BibleIcon /> },
+  { label: 'Anuncios y Boletín', path: '/announcements', icon: <AnnouncementIcon /> },
+  { label: 'Sermones y Podcast', path: '/sermons', icon: <SermonIcon /> },
+  { label: 'Diezmos y Ofrendas', path: '/donations', icon: <DonationIcon /> }
+];
 
 export default function AppLayout({ children }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, currentRole, setRole, logout, isAuthenticated } = useAuth();
+  const { user, currentRole, setRole, logout } = useAuth();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [roleAnchorEl, setRoleAnchorEl] = useState(null);
-
-  const [showNotifPrompt, setShowNotifPrompt] = useState(() => {
-    return getNotificationPermissionState() === 'default';
-  });
-
-  React.useEffect(() => {
-    if (getNotificationPermissionState() === 'granted') {
-      startBackgroundNotificationSync(user);
-    }
-  }, [user]);
-
-  // If rendering login page, render full standalone screen without layout constraints
-  if (location.pathname === '/login') {
-    return children;
-  }
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -85,34 +71,8 @@ export default function AppLayout({ children }) {
     setRoleAnchorEl(null);
   };
 
-  const handleLogout = () => {
-    setRoleAnchorEl(null);
-    logout();
-    navigate('/login');
-  };
-
-  // Dynamic Navigation Items based on active role
-  const isPastorOrAdmin = currentRole === 'ADMIN' || currentRole === 'PASTOR';
-
-  const navItems = [
-    { label: 'Muro de Oración', path: '/prayers', icon: <PrayerIcon /> },
-    { label: 'Santa Biblia', path: '/bible', icon: <BibleIcon /> },
-    { label: 'Galería Multimedia', path: '/gallery', icon: <GalleryIcon /> },
-    { label: 'Anuncios y Boletín', path: '/announcements', icon: <AnnouncementIcon /> },
-    { label: 'Sermones y Podcast', path: '/sermons', icon: <SermonIcon /> },
-    { label: 'Diezmos y Ofrendas', path: '/donations', icon: <DonationIcon /> }
-  ];
-
-  if (isPastorOrAdmin) {
-    navItems.push({
-      label: 'Gestión de Usuarios',
-      path: '/admin/users',
-      icon: <AdminIcon sx={{ color: '#0284C7' }} />
-    });
-  }
-
   // Find active nav tab index
-  const currentNavIndex = navItems.findIndex((item) => item.path === location.pathname);
+  const currentNavIndex = NAV_ITEMS.findIndex((item) => item.path === location.pathname);
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#FFFFFF' }}>
@@ -123,11 +83,10 @@ export default function AppLayout({ children }) {
           src="/logo.png"
           alt="Logo Iglesia"
           sx={{
-            width: 42,
-            height: 42,
+            width: 40,
+            height: 40,
             borderRadius: '50%',
             objectFit: 'cover',
-            mixBlendMode: 'multiply',
             border: '1px solid #E2E8F0'
           }}
         />
@@ -143,7 +102,7 @@ export default function AppLayout({ children }) {
 
       {/* Navigation Links */}
       <List sx={{ px: 1.5, py: 2, flexGrow: 1 }}>
-        {navItems.map((item) => {
+        {NAV_ITEMS.map((item) => {
           const isSelected = location.pathname === item.path;
           return (
             <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
@@ -189,16 +148,19 @@ export default function AppLayout({ children }) {
 
       <Divider />
 
-      {/* Drawer Footer / Active User & Role */}
+      {/* Drawer Footer / User Role Info */}
       <Box sx={{ p: 2, backgroundColor: '#F8FAFC' }}>
         <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1, fontWeight: 500 }}>
-          USUARIO ACTIVO / ROL:
+          MODO DE ROL ACTIVO (DEMO):
         </Typography>
         <Chip
-          label={`${user?.full_name || user?.name || 'Invitado'} (${currentRole})`}
-          color={currentRole === 'ADMIN' ? 'primary' : currentRole === 'PASTOR' ? 'secondary' : currentRole === 'LIDER' ? 'info' : 'default'}
+          label={`Rol: ${currentRole}`}
+          color={currentRole === 'ADMIN' ? 'primary' : currentRole === 'LIDER' ? 'info' : 'default'}
           size="small"
-          sx={{ width: '100%', justifyContent: 'center', px: 1, py: 1.8, borderRadius: '8px', fontWeight: 600 }}
+          onClick={handleRoleMenuOpen}
+          onDelete={handleRoleMenuOpen}
+          deleteIcon={<ExpandMoreIcon />}
+          sx={{ width: '100%', justifyContent: 'space-between', px: 1, py: 1.8, borderRadius: '8px' }}
         />
       </Box>
     </Box>
@@ -207,7 +169,7 @@ export default function AppLayout({ children }) {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F8FAFC' }}>
       {/* Top Header AppBar */}
-      <AppBar position="fixed" sx={{ zIndex: (th) => th.zIndex.drawer + 1, backgroundColor: '#0F172A' }}>
+      <AppBar position="fixed" sx={{ zIndex: (th) => th.zIndex.drawer + 1 }}>
         <Toolbar sx={{ justifyContent: 'space-between', minHeight: { xs: 56, sm: 64 }, px: { xs: 2, sm: 3 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             {isMobile && (
@@ -227,72 +189,66 @@ export default function AppLayout({ children }) {
                 border: '1px solid rgba(255, 255, 255, 0.3)'
               }}
             />
-            <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.2rem' } }}>
-              {navItems.find((n) => n.path === location.pathname)?.label || 'Iglesia Restauración'}
+            <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: { xs: '1.05rem', sm: '1.2rem' } }}>
+              {NAV_ITEMS.find((n) => n.path === location.pathname)?.label || 'Portal Iglesia Restauración'}
             </Typography>
           </Box>
 
-          {/* User Profile & Role Switcher Menu */}
+          {/* Role Switcher Menu Trigger */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Tooltip title="Opciones de Perfil y Rol">
+            <Tooltip title="Cambiar Rol de Demostración">
               <Chip
                 icon={<UserIcon sx={{ color: '#FFFFFF !important', fontSize: '1.1rem' }} />}
-                label={`${user?.full_name?.split(' ')[0] || 'Usuario'} (${currentRole})`}
+                label={`${user?.name || 'Usuario'} (${currentRole})`}
                 onClick={handleRoleMenuOpen}
                 variant="outlined"
                 sx={{
                   color: '#FFFFFF',
                   borderColor: 'rgba(255, 255, 255, 0.25)',
                   cursor: 'pointer',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   fontSize: '0.8rem',
                   '&:hover': {
                     borderColor: '#FFFFFF',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)'
                   }
                 }}
               />
             </Tooltip>
           </Box>
 
-          {/* Dropdown Popup Menu */}
+          {/* Role Selector Popup Menu */}
           <Menu
             anchorEl={roleAnchorEl}
             open={Boolean(roleAnchorEl)}
             onClose={() => handleRoleMenuClose(null)}
-            PaperProps={{ sx: { width: 240, mt: 1, p: 0.5 } }}
+            PaperProps={{ sx: { width: 220, mt: 1, p: 0.5 } }}
           >
             <Box sx={{ px: 2, py: 1 }}>
-              <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, display: 'block' }}>
-                PERFIL DE USUARIO
-              </Typography>
-
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0F172A', mt: 0.5 }}>
-                {user?.full_name || 'Invitado'}
-              </Typography>
-              <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>
-                {user?.email}
+              <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+                SELECCIONAR ROL
               </Typography>
             </Box>
             <Divider />
-
-            {isPastorOrAdmin && (
-              <MenuItem
-                onClick={() => {
-                  setRoleAnchorEl(null);
-                  navigate('/admin/users');
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 32 }}>
-                  <AdminIcon fontSize="small" color="primary" />
-                </ListItemIcon>
-                <ListItemText primary="Gestión de Usuarios" />
-              </MenuItem>
-            )}
-
-            <Divider />
-            <MenuItem onClick={handleLogout} sx={{ color: '#EF4444' }}>
-              <ListItemIcon sx={{ minWidth: 32, color: '#EF4444' }}>
+            <MenuItem onClick={() => handleRoleMenuClose('MIEMBRO')} selected={currentRole === 'MIEMBRO'}>
+              <ListItemText primary="Miembro" secondary="Vista estándar de miembros" />
+            </MenuItem>
+            <MenuItem onClick={() => handleRoleMenuClose('LIDER')} selected={currentRole === 'LIDER'}>
+              <ListItemText primary="Líder" secondary="Acceso a peticiones confidenciales" />
+            </MenuItem>
+            <MenuItem onClick={() => handleRoleMenuClose('ADMIN')} selected={currentRole === 'ADMIN'}>
+              <ListItemText primary="Administrador / Pastor" secondary="Gestión total y publicaciones" />
+            </MenuItem>
+            <Divider sx={{ my: 0.5 }} />
+            <MenuItem
+              onClick={() => {
+                handleRoleMenuClose(null);
+                logout();
+                navigate('/login');
+              }}
+              sx={{ color: '#EF4444' }}
+            >
+              <ListItemIcon sx={{ color: '#EF4444', minWidth: 32 }}>
                 <LogoutIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText primary="Cerrar Sesión" />
@@ -315,12 +271,12 @@ export default function AppLayout({ children }) {
             },
           }}
         >
-          <Toolbar />
+          <Toolbar /> {/* Spacer for AppBar */}
           {drawerContent}
         </Drawer>
       )}
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer (Temporary Slide-in) */}
       {isMobile && (
         <Drawer
           variant="temporary"
@@ -338,57 +294,25 @@ export default function AppLayout({ children }) {
         </Drawer>
       )}
 
-      {/* Main Body */}
+      {/* Main Content Body */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           minHeight: '100vh',
           pt: { xs: 8, sm: 9 },
-          pb: { xs: 9, md: 4 },
+          pb: { xs: 9, md: 4 }, // Space at bottom for mobile BottomNavigation
           px: { xs: 2, sm: 3, md: 4 },
           maxWidth: '100%',
           overflowX: 'hidden'
         }}
       >
         <Container maxWidth="lg" sx={{ p: 0 }}>
-          {showNotifPrompt && (
-            <Alert
-              severity="info"
-              icon={<NotificationIcon sx={{ color: '#0284C7' }} />}
-              onClose={() => setShowNotifPrompt(false)}
-              action={
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={async () => {
-                    await requestNotificationPermission();
-                    setShowNotifPrompt(false);
-                  }}
-                  sx={{
-                    fontWeight: 700,
-                    textTransform: 'none',
-                    backgroundColor: '#0284C7',
-                    color: '#FFFFFF',
-                    borderRadius: 2,
-                    '&:hover': { backgroundColor: '#0369A1' }
-                  }}
-                >
-                  Activar
-                </Button>
-              }
-              sx={{ mb: 2.5, borderRadius: 3, border: '1px solid #BAE6FD', backgroundColor: '#F0F9FF', color: '#0369A1', alignItems: 'center' }}
-            >
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#0369A1' }}>
-                🔔 ¿Deseas recibir notificaciones de eventos y anuncios de la Iglesia en tu teléfono?
-              </Typography>
-            </Alert>
-          )}
           {children}
         </Container>
       </Box>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation Bar (Fija abajo) */}
       {isMobile && (
         <Paper
           sx={{
@@ -405,14 +329,14 @@ export default function AppLayout({ children }) {
           <BottomNavigation
             value={currentNavIndex !== -1 ? currentNavIndex : 0}
             onChange={(event, newValue) => {
-              if (navItems[newValue]) navigate(navItems[newValue].path);
+              navigate(NAV_ITEMS[newValue].path);
             }}
             showLabels
           >
-            {navItems.map((item) => (
+            {NAV_ITEMS.map((item) => (
               <BottomNavigationAction
                 key={item.path}
-                label={item.label.split(' ')[0]}
+                label={item.label.split(' ')[0]} // Clean short label
                 icon={item.icon}
               />
             ))}

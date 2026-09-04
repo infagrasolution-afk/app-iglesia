@@ -2,403 +2,389 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
-  CardContent,
   Typography,
   TextField,
   Button,
   IconButton,
   InputAdornment,
+  Checkbox,
+  FormControlLabel,
   Alert,
   CircularProgress,
-  Container,
-  Paper,
-  FormControlLabel,
-  Checkbox,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Divider
+  Fade,
+  Avatar
 } from '@mui/material';
 import {
+  PersonOutline as UserIcon,
+  LockOutlined as LockIcon,
   Visibility,
-  VisibilityOff,
-  Lock,
-  Person,
-  Phone as PhoneIcon,
-  WhatsApp as WhatsAppIcon,
-  VpnKey as KeyIcon
+  VisibilityOff
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
-import { authAPI } from '../services/api';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, inactivityNotice, setInactivityNotice } = useAuth();
+  const { login, isAuthenticated } = useAuth();
 
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
-  // Password Reset Modal State
-  const [resetModalOpen, setResetModalOpen] = useState(false);
-  const [resetUser, setResetUser] = useState('');
-  const [resetPhone, setResetPhone] = useState('');
-  const [resetNewPwd, setResetNewPwd] = useState('');
-  const [resetSuccess, setResetSuccess] = useState('');
-  const [resetError, setResetError] = useState('');
-  const [resetLoading, setResetLoading] = useState(false);
-
+  // If already authenticated, redirect to portal
   useEffect(() => {
-    // Read saved credentials if remember me was enabled
-    const savedUser = localStorage.getItem('remembered_email');
-    const savedPwd = localStorage.getItem('remembered_password');
-    const isRemembered = localStorage.getItem('remember_me') === 'true';
-
-    if (isRemembered && savedUser) {
-      setEmail(savedUser);
-      if (savedPwd) setPassword(savedPwd);
-      setRememberMe(true);
+    if (isAuthenticated) {
+      navigate('/prayers');
     }
-  }, []);
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrorMessage('');
-    setLoading(true);
+    setErrorMsg('');
 
-    try {
-      if (rememberMe) {
-        localStorage.setItem('remember_me', 'true');
-        localStorage.setItem('remembered_email', email);
-        localStorage.setItem('remembered_password', password);
-      } else {
-        localStorage.removeItem('remember_me');
-        localStorage.removeItem('remembered_email');
-        localStorage.removeItem('remembered_password');
-      }
-
-      await login(email, password);
-      navigate('/prayers');
-    } catch (err) {
-      setErrorMessage(err.message || 'Error al iniciar sesión. Verifique sus datos.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    setResetError('');
-    setResetSuccess('');
-
-    if (!resetUser.trim() || !resetPhone.trim()) {
-      setResetError('Por favor ingrese su Nombre de Usuario y Teléfono Registrado.');
+    if (!username || !password) {
+      setErrorMsg('Por favor completa todos los campos.');
       return;
     }
 
-    setResetLoading(true);
+    setLoading(true);
     try {
-      const res = await authAPI.resetPassword(resetUser, resetPhone, resetNewPwd);
-      setResetSuccess(res.message || 'Contraseña restablecida con éxito. Ya puede iniciar sesión.');
-    } catch (err) {
-      setResetError(err.message || 'No se pudo restablecer la contraseña. Verifique sus datos.');
+      const res = await login(username, password);
+      if (res.success) {
+        navigate('/prayers');
+      } else {
+        setErrorMsg(res.error || 'Credenciales inválidas. Verifica tu usuario y contraseña.');
+      }
+    } catch {
+      setErrorMsg('Error de conexión al servidor.');
     } finally {
-      setResetLoading(false);
+      setLoading(false);
     }
-  };
-
-  const handleContactAdminWhatsApp = () => {
-    const adminPhone = '584141234567';
-    const msg = `¡Hola! Olvidé mi contraseña de la app de la Iglesia Restauración.\n• Usuario: ${resetUser || 'Mi usuario'}\n• Teléfono: ${resetPhone || 'Mi teléfono'}\nPor favor, solicito su ayuda para restablecer mis credenciales.`;
-    window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   return (
     <Box
       sx={{
         minHeight: '100vh',
+        width: '100%',
+        position: 'relative',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)',
-        p: 2
+        backgroundImage: 'url(/brick-lamp-bg.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: '#0A1128',
+        p: 2,
+        overflow: 'hidden'
       }}
     >
-      <Container maxWidth="xs">
-        <Paper
-          elevation={12}
+      {/* Soft dark vignette to focus on the center lamp and glass card */}
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(ellipse at 50% 18%, rgba(255, 200, 110, 0.22) 0%, rgba(10, 17, 40, 0.45) 45%, rgba(6, 10, 25, 0.92) 100%)',
+          pointerEvents: 'none',
+          zIndex: 1
+        }}
+      />
+
+      {/* Luminous Warm Light Beam overlay streaming from lamp */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: { xs: '340px', sm: '480px' },
+          height: { xs: '380px', sm: '500px' },
+          background: 'radial-gradient(ellipse at top, rgba(255, 220, 140, 0.35) 0%, rgba(255, 190, 80, 0.12) 35%, rgba(0,0,0,0) 70%)',
+          pointerEvents: 'none',
+          zIndex: 1
+        }}
+      />
+
+      {/* FROSTED GLASS CARD (Glassmorphism as in the reference image) */}
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{
+          position: 'relative',
+          zIndex: 2,
+          width: '100%',
+          maxWidth: '390px',
+          mt: { xs: 4, sm: 6 },
+          p: { xs: 3.5, sm: 4.5 },
+          borderRadius: '26px',
+          background: 'rgba(255, 255, 255, 0.08)',
+          backdropFilter: 'blur(22px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(22px) saturate(190%)',
+          border: '1px solid rgba(255, 255, 255, 0.22)',
+          borderTop: '1px solid rgba(255, 235, 180, 0.45)', // Catches the top lamp light
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 30px rgba(255, 210, 120, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center'
+        }}
+      >
+        {/* Church Logo Image at Top (Circular badge with soft warm halo) */}
+        <Box
           sx={{
-            borderRadius: 4,
-            overflow: 'hidden',
-            backgroundColor: 'rgba(255, 255, 255, 0.96)',
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+            position: 'relative',
+            mb: 1.8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
-          {/* Header Banner */}
+          {/* Outer glowing ring */}
           <Box
             sx={{
-              backgroundColor: '#0F172A',
-              color: '#FFFFFF',
-              py: 4,
-              px: 3,
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center'
+              position: 'absolute',
+              width: '76px',
+              height: '76px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(255, 225, 140, 0.4) 0%, rgba(255, 255, 255, 0) 70%)',
+              filter: 'blur(4px)'
             }}
-          >
-            <Box
-              component="img"
-              src="/logo.png"
-              alt="Iglesia Restauración"
+          />
+          <Avatar
+            src="/logo.png"
+            alt="Restauración"
+            sx={{
+              width: 68,
+              height: 68,
+              border: '2px solid rgba(255, 255, 255, 0.65)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45), 0 0 15px rgba(255, 220, 130, 0.3)',
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              p: 1
+            }}
+            imgProps={{
+              style: {
+                objectFit: 'contain',
+                width: '100%',
+                height: '100%'
+              }
+            }}
+          />
+        </Box>
+
+        {/* Church Name "Restauración" replacing "Login" */}
+        <Typography
+          variant="h4"
+          sx={{
+            color: '#FFFFFF',
+            fontWeight: 700,
+            fontSize: { xs: '1.85rem', sm: '2.1rem' },
+            letterSpacing: '-0.02em',
+            textShadow: '0 2px 10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 255, 255, 0.25)',
+            mb: 0.4
+          }}
+        >
+          Restauración
+        </Typography>
+
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'rgba(255, 255, 255, 0.72)',
+            fontSize: '0.85rem',
+            fontWeight: 400,
+            mb: 3,
+            textShadow: '0 1px 4px rgba(0, 0, 0, 0.4)'
+          }}
+        >
+
+        </Typography>
+
+        {/* Error Alert */}
+        {errorMsg && (
+          <Fade in={Boolean(errorMsg)}>
+            <Alert
+              severity="error"
+              onClose={() => setErrorMsg('')}
               sx={{
-                width: 90,
-                height: 90,
-                objectFit: 'cover',
-                borderRadius: '50%',
-                mixBlendMode: 'screen',
-                mb: 1.5,
-                filter: 'drop-shadow(0 4px 10px rgba(56, 189, 248, 0.4))'
+                width: '100%',
+                mb: 2.2,
+                borderRadius: '16px',
+                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                backdropFilter: 'blur(10px)',
+                color: '#FEE2E2',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                fontSize: '0.84rem',
+                '& .MuiAlert-icon': { color: '#F87171' }
               }}
-            />
+            >
+              {errorMsg}
+            </Alert>
+          </Fade>
+        )}
 
-            <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.2 }}>
-              Iglesia Restauración
-            </Typography>
-          </Box>
+        {/* Username / Email Input (Frosted glass pill with user icon on the right) */}
+        <TextField
+          fullWidth
+          name="usuario"
+          placeholder="Usuario"
+          value={username}
+          onChange={(e) => {
+            setUsername(e.target.value);
+            setErrorMsg('');
+          }}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <UserIcon sx={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: 20 }} />
+              </InputAdornment>
+            )
+          }}
+          sx={glassInputStyles}
+        />
 
-          <CardContent sx={{ p: 3.5 }}>
-            {inactivityNotice && (
-              <Alert severity="warning" onClose={() => setInactivityNotice && setInactivityNotice('')} sx={{ mb: 2.5, borderRadius: 2 }}>
-                {inactivityNotice}
-              </Alert>
-            )}
-
-            {errorMessage && (
-              <Alert severity="error" sx={{ mb: 2.5, borderRadius: 2 }}>
-                {errorMessage}
-              </Alert>
-            )}
-
-            <form onSubmit={handleSubmit}>
-              <TextField
-                fullWidth
-                label="Usuario *"
-                type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Linfante"
-                margin="normal"
-                required
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Person sx={{ color: '#64748B' }} />
-                    </InputAdornment>
-                  )
-                }}
-                sx={{ mb: 2 }}
-              />
-
-              <TextField
-                fullWidth
-                label="Contraseña *"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                margin="normal"
-                required
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock sx={{ color: '#64748B' }} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
-                sx={{ mb: 1 }}
-              />
-
-              {/* Enlace Olvidé mi Contraseña */}
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
-                <Button
+        {/* Password Input (Frosted glass pill with lock icon on the right) */}
+        <TextField
+          fullWidth
+          name="contraseña"
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Contraseña"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setErrorMsg('');
+          }}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={() => setShowPassword(!showPassword)}
+                  edge="end"
                   size="small"
-                  variant="text"
-                  onClick={() => {
-                    setResetUser(email);
-                    setResetError('');
-                    setResetSuccess('');
-                    setResetModalOpen(true);
-                  }}
-                  sx={{ textTransform: 'none', color: '#0284C7', fontWeight: 600, fontSize: '0.82rem' }}
+                  sx={{ color: 'rgba(255, 255, 255, 0.75)', p: 0.5, '&:hover': { color: '#FFFFFF' } }}
                 >
-                  ¿Olvidaste tu contraseña?
-                </Button>
-              </Box>
+                  {showPassword ? <VisibilityOff sx={{ fontSize: 18 }} /> : <LockIcon sx={{ fontSize: 18 }} />}
+                </IconButton>
+              </InputAdornment>
+            )
+          }}
+          sx={{ ...glassInputStyles, mt: 1.8 }}
+        />
 
-              {/* Checkbox para Recordar Usuario y Contraseña */}
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    color="primary"
-                    size="small"
-                  />
-                }
-                label={
-                  <Typography variant="body2" sx={{ color: '#475569', fontSize: '0.85rem', fontWeight: 500 }}>
-                    Recordar usuario y contraseña
-                  </Typography>
-                }
-                sx={{ mb: 2.5, display: 'flex', alignItems: 'center', ml: -0.5 }}
-              />
-
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                size="large"
-                disabled={loading}
+        {/* Remember me & Forgot password Row */}
+        <Box
+          sx={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            mt: 1.5,
+            mb: 2.8,
+            px: 0.5
+          }}
+        >
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                size="small"
                 sx={{
-                  py: 1.4,
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  borderRadius: 3,
-                  textTransform: 'none',
-                  backgroundColor: '#0F172A',
-                  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.25)',
-                  '&:hover': {
-                    backgroundColor: '#1E293B',
-                    boxShadow: '0 6px 16px rgba(15, 23, 42, 0.35)'
+                  color: 'rgba(255, 255, 255, 0.65)',
+                  p: 0.6,
+                  '&.Mui-checked': {
+                    color: '#FFFFFF'
                   }
                 }}
-              >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Iniciar Sesión'}
-              </Button>
-            </form>
-          </CardContent>
-        </Paper>
-      </Container>
-
-      {/* Password Reset Modal Dialog */}
-      <Dialog open={resetModalOpen} onClose={() => setResetModalOpen(false)} maxWidth="xs" fullWidth>
-        <form onSubmit={handleResetPassword}>
-          <DialogTitle sx={{ fontWeight: 800, fontSize: '1.2rem', pb: 1 }}>
-            🔑 Recuperar Contraseña
-          </DialogTitle>
-          <Typography variant="caption" sx={{ px: 3, color: '#64748B', display: 'block', mb: 1 }}>
-            Ingrese su usuario y teléfono registrado para restablecer su clave.
-          </Typography>
-          <Divider />
-
-          <DialogContent sx={{ p: 3 }}>
-            {resetSuccess && (
-              <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
-                {resetSuccess}
-              </Alert>
-            )}
-            {resetError && (
-              <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-                {resetError}
-              </Alert>
-            )}
-
-            <TextField
-              fullWidth
-              label="Nombre de Usuario *"
-              required
-              value={resetUser}
-              onChange={(e) => setResetUser(e.target.value)}
-              placeholder="ej. Linfante, Jperez"
-              sx={{ mb: 2 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Person sx={{ color: '#64748B' }} />
-                  </InputAdornment>
-                )
-              }}
-            />
-
-            <TextField
-              fullWidth
-              label="Número de Teléfono Registrado *"
-              required
-              value={resetPhone}
-              onChange={(e) => setResetPhone(e.target.value)}
-              placeholder="ej. +58 414 0000000"
-              sx={{ mb: 2 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <PhoneIcon sx={{ color: '#64748B' }} />
-                  </InputAdornment>
-                )
-              }}
-            />
-
-            <TextField
-              fullWidth
-              label="Nueva Contraseña (Opcional - Defecto: 123456)"
-              type="password"
-              value={resetNewPwd}
-              onChange={(e) => setResetNewPwd(e.target.value)}
-              placeholder="••••••••"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <KeyIcon sx={{ color: '#64748B' }} />
-                  </InputAdornment>
-                )
-              }}
-            />
-
-            <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px dashed #E2E8F0', textAlign: 'center' }}>
-              <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1 }}>
-                ¿Prefieres asistencia directa de la iglesia?
+              />
+            }
+            label={
+              <Typography sx={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.84rem', userSelect: 'none' }}>
+                Remember me
               </Typography>
-              <Button
-                variant="outlined"
-                color="success"
-                size="small"
-                startIcon={<WhatsAppIcon />}
-                onClick={handleContactAdminWhatsApp}
-                sx={{ textTransform: 'none', borderRadius: 2 }}
-              >
-                Solicitar ayuda por WhatsApp
-              </Button>
-            </Box>
-          </DialogContent>
+            }
+            sx={{ m: 0 }}
+          />
 
-          <Divider />
-          <DialogActions sx={{ p: 2 }}>
-            <Button onClick={() => setResetModalOpen(false)} color="inherit">
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={resetLoading}
-              sx={{ backgroundColor: '#0F172A', '&:hover': { backgroundColor: '#1E293B' } }}
-            >
-              {resetLoading ? <CircularProgress size={20} color="inherit" /> : 'Restablecer Clave'}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
+          <Typography
+            onClick={() => setErrorMsg('Comunícate con el pastor o administrador para restablecer tu contraseña.')}
+            sx={{
+              color: 'rgba(255, 255, 255, 0.85)',
+              fontSize: '0.84rem',
+              cursor: 'pointer',
+              userSelect: 'none',
+              transition: 'all 0.2s',
+              '&:hover': {
+                color: '#FFFFFF',
+                textDecoration: 'underline'
+              }
+            }}
+          >
+            Forgot password?
+          </Typography>
+        </Box>
+
+        {/* Primary Action Button (White Rounded Pill Button matching the reference) */}
+        <Button
+          type="submit"
+          fullWidth
+          disabled={loading}
+          sx={{
+            py: 1.35,
+            borderRadius: '50px',
+            backgroundColor: '#FFFFFF',
+            color: '#0F172A',
+            fontWeight: 700,
+            fontSize: '1rem',
+            textTransform: 'none',
+            letterSpacing: '0.01em',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35), 0 0 15px rgba(255, 255, 255, 0.25)',
+            transition: 'all 0.25s ease',
+            '&:hover': {
+              backgroundColor: '#F8FAFC',
+              transform: 'translateY(-2px)',
+              boxShadow: '0 12px 28px rgba(0, 0, 0, 0.45), 0 0 25px rgba(255, 255, 255, 0.5)'
+            },
+            '&:active': {
+              transform: 'translateY(0px)'
+            }
+          }}
+        >
+          {loading ? <CircularProgress size={22} sx={{ color: '#0F172A' }} /> : 'Login'}
+        </Button>
+      </Box>
     </Box>
   );
 }
+
+// Glassmorphism input styling matching the reference image
+const glassInputStyles = {
+  '& .MuiOutlinedInput-root': {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: '50px',
+    color: '#FFFFFF',
+    fontSize: '0.94rem',
+    height: '48px',
+    transition: 'all 0.25s ease',
+    '& fieldset': {
+      borderColor: 'rgba(255, 255, 255, 0.24)',
+      borderWidth: '1px'
+    },
+    '&:hover fieldset': {
+      borderColor: 'rgba(255, 255, 255, 0.45)'
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: 'rgba(255, 255, 255, 0.85)',
+      boxShadow: '0 0 16px rgba(255, 255, 255, 0.28)'
+    }
+  },
+  '& .MuiInputBase-input': {
+    padding: '12px 18px'
+  },
+  '& .MuiInputBase-input::placeholder': {
+    color: 'rgba(255, 255, 255, 0.65)',
+    opacity: 1
+  }
+};

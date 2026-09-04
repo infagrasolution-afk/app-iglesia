@@ -266,7 +266,7 @@ export default function Bible() {
               <InputLabel id="book-select-label">Seleccionar Libro</InputLabel>
               <Select
                 labelId="book-select-label"
-                value={books.some((b) => b.id === selectedBook) ? selectedBook : ''}
+                value={selectedBook}
                 label="Seleccionar Libro"
                 onChange={handleBookChange}
               >
@@ -285,7 +285,7 @@ export default function Bible() {
               <InputLabel id="chapter-select-label">Capítulo</InputLabel>
               <Select
                 labelId="chapter-select-label"
-                value={currentBookObj && currentBookObj.chapters >= selectedChapter ? selectedChapter : ''}
+                value={selectedChapter}
                 label="Capítulo"
                 onChange={(e) => setSelectedChapter(Number(e.target.value))}
               >

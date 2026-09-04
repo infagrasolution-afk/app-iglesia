@@ -1,31 +1,23 @@
-const rawApiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
-const API_BASE_URL = rawApiUrl ? `${rawApiUrl}/api` : '/api';
-
-function getAuthHeaders() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
-}
+const API_BASE_URL = '/api';
 
 async function fetchAPI(endpoint, options = {}) {
   try {
-    const headers = {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-      ...options.headers
-    };
+    const token = localStorage.getItem('token');
+    const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+        ...options.headers
+      },
+      ...options
     });
 
     if (!response.ok) {
-      let errDetail = `HTTP error! Status: ${response.status}`;
-      try {
-        const errJson = await response.json();
-        if (errJson.detail) errDetail = errJson.detail;
-      } catch (e) {}
-      throw new Error(errDetail);
+      const errorData = await response.json().catch(() => null);
+      const message = errorData?.detail || `Error HTTP: ${response.status}`;
+      throw new Error(message);
     }
 
     return await response.json();
@@ -35,174 +27,17 @@ async function fetchAPI(endpoint, options = {}) {
   }
 }
 
-// Authentication API Endpoints
 export const authAPI = {
-  login: async (email, password) => {
+  login: async (credentials) => {
     return await fetchAPI('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password })
-    });
-  },
-  getMe: async () => {
-    return await fetchAPI('/auth/me');
-  },
-  resetPassword: async (username, phone, new_password) => {
-    return await fetchAPI('/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ username, phone, new_password })
+      body: JSON.stringify(credentials)
     });
   }
 };
 
-// Users Administration API Endpoints (Pastors, Leaders, Members)
-export const userAPI = {
-  getAll: async (role = '', search = '') => {
-    try {
-      let query = [];
-      if (role) query.push(`role=${encodeURIComponent(role)}`);
-      if (search) query.push(`search=${encodeURIComponent(search)}`);
-      const qStr = query.length > 0 ? `?${query.join('&')}` : '';
-      return await fetchAPI(`/users${qStr}`);
-    } catch (err) {
-      // Offline / LocalStorage fallback
-      let saved = JSON.parse(localStorage.getItem('app_users') || '[]');
-      if (saved.length === 0) {
-        saved = [
-          { id: 1, email: 'Linfante', full_name: 'Pastor Luis Infante', role: 'ADMIN', phone: '+58 414 1234567', status: 'Activo', created_at: new Date().toISOString() }
-        ];
-        localStorage.setItem('app_users', JSON.stringify(saved));
-      }
-      let filtered = saved;
-      if (role) filtered = filtered.filter(u => u.role.toUpperCase() === role.toUpperCase());
-      if (search) {
-        const s = search.toLowerCase();
-        filtered = filtered.filter(u => u.full_name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s));
-      }
-      return filtered;
-    }
-  },
 
-  create: async (userData) => {
-    try {
-      return await fetchAPI('/users', {
-        method: 'POST',
-        body: JSON.stringify(userData)
-      });
-    } catch (err) {
-      const saved = JSON.parse(localStorage.getItem('app_users') || '[]');
-      const newUser = {
-        id: Date.now(),
-        ...userData,
-        status: userData.status || 'Activo',
-        created_at: new Date().toISOString()
-      };
-      saved.push(newUser);
-      localStorage.setItem('app_users', JSON.stringify(saved));
-      return newUser;
-    }
-  },
 
-  update: async (userId, userData) => {
-    try {
-      return await fetchAPI(`/users/${userId}`, {
-        method: 'PUT',
-        body: JSON.stringify(userData)
-      });
-    } catch (err) {
-      let saved = JSON.parse(localStorage.getItem('app_users') || '[]');
-      let updatedUser = null;
-      saved = saved.map(u => {
-        if (u.id === userId) {
-          updatedUser = { ...u, ...userData };
-          return updatedUser;
-        }
-        return u;
-      });
-      localStorage.setItem('app_users', JSON.stringify(saved));
-      return updatedUser;
-    }
-  },
-
-  delete: async (userId) => {
-    try {
-      return await fetchAPI(`/users/${userId}`, { method: 'DELETE' });
-    } catch (err) {
-      let saved = JSON.parse(localStorage.getItem('app_users') || '[]');
-      saved = saved.filter(u => u.id !== userId);
-      localStorage.setItem('app_users', JSON.stringify(saved));
-    }
-  }
-};
-
-// Media / Gallery API Endpoints (Photos & Videos)
-export const mediaAPI = {
-  getAll: async (mediaType = '', category = '') => {
-    try {
-      let query = [];
-      if (mediaType) query.push(`media_type=${encodeURIComponent(mediaType)}`);
-      if (category && category !== 'Todos') query.push(`category=${encodeURIComponent(category)}`);
-      const qStr = query.length > 0 ? `?${query.join('&')}` : '';
-      return await fetchAPI(`/media${qStr}`);
-    } catch (err) {
-      let saved = JSON.parse(localStorage.getItem('app_media') || '[]');
-      let filtered = saved;
-      if (mediaType) filtered = filtered.filter(m => m.media_type === mediaType);
-      if (category && category !== 'Todos') filtered = filtered.filter(m => m.category === category);
-      return filtered;
-    }
-  },
-
-  create: async (mediaData) => {
-    try {
-      return await fetchAPI('/media', {
-        method: 'POST',
-        body: JSON.stringify(mediaData)
-      });
-    } catch (err) {
-      const saved = JSON.parse(localStorage.getItem('app_media') || '[]');
-      const newItem = {
-        id: Date.now(),
-        ...mediaData,
-        created_at: new Date().toISOString()
-      };
-      saved.unshift(newItem);
-      localStorage.setItem('app_media', JSON.stringify(saved));
-      return newItem;
-    }
-  },
-
-  update: async (mediaId, mediaData) => {
-    try {
-      return await fetchAPI(`/media/${mediaId}`, {
-        method: 'PUT',
-        body: JSON.stringify(mediaData)
-      });
-    } catch (err) {
-      let saved = JSON.parse(localStorage.getItem('app_media') || '[]');
-      let updated = null;
-      saved = saved.map(m => {
-        if (m.id === mediaId) {
-          updated = { ...m, ...mediaData };
-          return updated;
-        }
-        return m;
-      });
-      localStorage.setItem('app_media', JSON.stringify(saved));
-      return updated;
-    }
-  },
-
-  delete: async (mediaId) => {
-    try {
-      return await fetchAPI(`/media/${mediaId}`, { method: 'DELETE' });
-    } catch (err) {
-      let saved = JSON.parse(localStorage.getItem('app_media') || '[]');
-      saved = saved.filter(m => m.id !== mediaId);
-      localStorage.setItem('app_media', JSON.stringify(saved));
-      return { message: 'Eliminado localmente', id: mediaId };
-    }
-  }
-};
 
 // Prayer API Endpoints
 export const prayerAPI = {
@@ -210,11 +45,42 @@ export const prayerAPI = {
     try {
       return await fetchAPI(`/prayers?filter_status=${status}&user_role=${role}`);
     } catch {
-      let saved = JSON.parse(localStorage.getItem('app_prayers') || '[]');
-      if (status !== 'all') {
-        saved = saved.filter(p => p.status === status);
-      }
-      return saved;
+      // Fallback mock dataset if backend is offline
+      return [
+        {
+          id: 1,
+          title: 'Oración por restauración familiar y salud',
+          description: 'Pedimos apoyo en oración por la recuperación física de nuestro hermano Roberto y fortaleza para toda su familia en este tiempo.',
+          author_name: 'María González',
+          is_anonymous: false,
+          visibility: 'PUBLIC',
+          status: 'active',
+          prayer_count: 14,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 2,
+          title: 'Petición confidencial de dirección laboral',
+          description: 'Pido sabiduría de lo alto para tomar una decisión importante en el área laboral y familiar. Dios guíe mis pasos.',
+          author_name: 'Hermano(a) en Fe (Anónimo)',
+          is_anonymous: true,
+          visibility: 'PUBLIC',
+          status: 'active',
+          prayer_count: 8,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 3,
+          title: 'Agradecimiento: ¡Sanidad en la rodilla completada!',
+          description: 'Damos toda la gloria a Dios. La intervención quirúrgica fue un éxito y la rehabilitación avanza victoriosamente.',
+          author_name: 'Familia Morales',
+          is_anonymous: false,
+          visibility: 'PUBLIC',
+          status: 'answered',
+          prayer_count: 22,
+          created_at: new Date().toISOString()
+        }
+      ];
     }
   },
 
@@ -225,8 +91,7 @@ export const prayerAPI = {
         body: JSON.stringify(prayerData)
       });
     } catch {
-      const saved = JSON.parse(localStorage.getItem('app_prayers') || '[]');
-      const newItem = {
+      return {
         id: Date.now(),
         ...prayerData,
         author_name: prayerData.is_anonymous ? 'Hermano(a) en Fe (Anónimo)' : 'Miembro de la Iglesia',
@@ -234,9 +99,6 @@ export const prayerAPI = {
         prayer_count: 1,
         created_at: new Date().toISOString()
       };
-      saved.unshift(newItem);
-      localStorage.setItem('app_prayers', JSON.stringify(saved));
-      return newItem;
     }
   },
 
@@ -244,9 +106,6 @@ export const prayerAPI = {
     try {
       return await fetchAPI(`/prayers/${id}/pray`, { method: 'POST' });
     } catch {
-      let saved = JSON.parse(localStorage.getItem('app_prayers') || '[]');
-      saved = saved.map(p => p.id === id ? { ...p, prayer_count: (p.prayer_count || 0) + 1 } : p);
-      localStorage.setItem('app_prayers', JSON.stringify(saved));
       return { id, success: true };
     }
   },
@@ -258,21 +117,7 @@ export const prayerAPI = {
         body: JSON.stringify({ status: newStatus })
       });
     } catch {
-      let saved = JSON.parse(localStorage.getItem('app_prayers') || '[]');
-      saved = saved.map(p => p.id === id ? { ...p, status: newStatus } : p);
-      localStorage.setItem('app_prayers', JSON.stringify(saved));
       return { id, status: newStatus };
-    }
-  },
-
-  delete: async (id) => {
-    try {
-      return await fetchAPI(`/prayers/${id}`, { method: 'DELETE' });
-    } catch {
-      let saved = JSON.parse(localStorage.getItem('app_prayers') || '[]');
-      saved = saved.filter(p => p.id !== id);
-      localStorage.setItem('app_prayers', JSON.stringify(saved));
-      return { id, message: 'Eliminado localmente' };
     }
   }
 };
@@ -283,10 +128,26 @@ export const announcementAPI = {
     try {
       return await fetchAPI('/announcements');
     } catch {
-      return JSON.parse(localStorage.getItem('app_announcements') || '[]');
+      return [
+        {
+          id: 1,
+          title: "Gran Retiro de Familias 2026: 'Edificados sobre la Roca'",
+          content: "Te invitamos a inscribirte en nuestro retiro anual de familias del 15 al 17 de Octubre. Habrá plenarias, talleres para niños y matrimonios.",
+          category: "Eventos",
+          is_important: true,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 2,
+          title: "Jornada General de Ayuno y Clamor por las Naciones",
+          content: "Este sábado de 8:00 AM a 12:00 PM nos uniremos en el templo principal para interceder por las familias y nuestra comunidad.",
+          category: "Ayunos",
+          is_important: false,
+          created_at: new Date().toISOString()
+        }
+      ];
     }
   },
-
   create: async (data) => {
     try {
       return await fetchAPI('/announcements', {
@@ -294,43 +155,7 @@ export const announcementAPI = {
         body: JSON.stringify(data)
       });
     } catch {
-      const saved = JSON.parse(localStorage.getItem('app_announcements') || '[]');
-      const newItem = { id: Date.now(), ...data, created_at: new Date().toISOString() };
-      saved.unshift(newItem);
-      localStorage.setItem('app_announcements', JSON.stringify(saved));
-      return newItem;
-    }
-  },
-
-  update: async (id, data) => {
-    try {
-      return await fetchAPI(`/announcements/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data)
-      });
-    } catch {
-      let saved = JSON.parse(localStorage.getItem('app_announcements') || '[]');
-      let updated = null;
-      saved = saved.map(a => {
-        if (a.id === id) {
-          updated = { ...a, ...data };
-          return updated;
-        }
-        return a;
-      });
-      localStorage.setItem('app_announcements', JSON.stringify(saved));
-      return updated;
-    }
-  },
-
-  delete: async (id) => {
-    try {
-      return await fetchAPI(`/announcements/${id}`, { method: 'DELETE' });
-    } catch {
-      let saved = JSON.parse(localStorage.getItem('app_announcements') || '[]');
-      saved = saved.filter(a => a.id !== id);
-      localStorage.setItem('app_announcements', JSON.stringify(saved));
-      return { id, message: 'Eliminado localmente' };
+      return { id: Date.now(), ...data, created_at: new Date().toISOString() };
     }
   }
 };
@@ -341,54 +166,26 @@ export const sermonAPI = {
     try {
       return await fetchAPI('/sermons');
     } catch {
-      return JSON.parse(localStorage.getItem('app_sermons') || '[]');
-    }
-  },
-
-  create: async (data) => {
-    try {
-      return await fetchAPI('/sermons', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
-    } catch {
-      const saved = JSON.parse(localStorage.getItem('app_sermons') || '[]');
-      const newItem = { id: Date.now(), ...data, created_at: new Date().toISOString() };
-      saved.unshift(newItem);
-      localStorage.setItem('app_sermons', JSON.stringify(saved));
-      return newItem;
-    }
-  },
-
-  update: async (id, data) => {
-    try {
-      return await fetchAPI(`/sermons/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data)
-      });
-    } catch {
-      let saved = JSON.parse(localStorage.getItem('app_sermons') || '[]');
-      let updated = null;
-      saved = saved.map(s => {
-        if (s.id === id) {
-          updated = { ...s, ...data };
-          return updated;
+      return [
+        {
+          id: 1,
+          title: "Viviendo por Fe en Tiempos de Incertidumbre",
+          series: "Serie: Fundamentos Inconmovibles",
+          speaker: "Pr. Alejandro Silva",
+          audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+          pdf_url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 2,
+          title: "El Poder de la Oración Perseverante",
+          series: "Serie: La Oración que Transforma",
+          speaker: "Pr. Alejandro Silva",
+          audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+          pdf_url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+          created_at: new Date().toISOString()
         }
-        return s;
-      });
-      localStorage.setItem('app_sermons', JSON.stringify(saved));
-      return updated;
-    }
-  },
-
-  delete: async (id) => {
-    try {
-      return await fetchAPI(`/sermons/${id}`, { method: 'DELETE' });
-    } catch {
-      let saved = JSON.parse(localStorage.getItem('app_sermons') || '[]');
-      saved = saved.filter(s => s.id !== id);
-      localStorage.setItem('app_sermons', JSON.stringify(saved));
-      return { id, message: 'Eliminado localmente' };
+      ];
     }
   }
 };
@@ -399,10 +196,18 @@ export const donationAPI = {
     try {
       return await fetchAPI('/donations');
     } catch {
-      return JSON.parse(localStorage.getItem('app_donations') || '[]');
+      return [
+        {
+          id: 101,
+          donation_type: 'Diezmo',
+          amount: 100.0,
+          payment_method: 'Transferencia Bancaria',
+          reference: 'REF-98124',
+          created_at: new Date().toISOString()
+        }
+      ];
     }
   },
-
   create: async (donationData) => {
     try {
       return await fetchAPI('/donations', {
@@ -410,22 +215,7 @@ export const donationAPI = {
         body: JSON.stringify(donationData)
       });
     } catch {
-      const saved = JSON.parse(localStorage.getItem('app_donations') || '[]');
-      const newItem = { id: Date.now(), ...donationData, created_at: new Date().toISOString() };
-      saved.unshift(newItem);
-      localStorage.setItem('app_donations', JSON.stringify(saved));
-      return newItem;
-    }
-  },
-
-  delete: async (id) => {
-    try {
-      return await fetchAPI(`/donations/${id}`, { method: 'DELETE' });
-    } catch {
-      let saved = JSON.parse(localStorage.getItem('app_donations') || '[]');
-      saved = saved.filter(d => d.id !== id);
-      localStorage.setItem('app_donations', JSON.stringify(saved));
-      return { id, message: 'Eliminado localmente' };
+      return { id: Date.now(), ...donationData, created_at: new Date().toISOString() };
     }
   }
 };

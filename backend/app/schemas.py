@@ -2,31 +2,18 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
 
-# Auth & User Schemas
+# Auth Schemas
 class UserBase(BaseModel):
-    email: Optional[str] = ""
+    email: EmailStr
     full_name: str
-    role: str = "MIEMBRO" # ADMIN, PASTOR, LIDER, MIEMBRO
-    phone: Optional[str] = ""
-    status: Optional[str] = "Activo"
+    role: str = "MIEMBRO"
 
 class UserCreate(UserBase):
-    password: Optional[str] = "123456"
-
-class UserAdminCreate(UserBase):
-    password: Optional[str] = "123456"
-
-class UserUpdate(BaseModel):
-    email: Optional[str] = None
-    full_name: Optional[str] = None
-    role: Optional[str] = None
-    phone: Optional[str] = None
-    status: Optional[str] = None
-    password: Optional[str] = None
+    password: str
 
 class UserResponse(UserBase):
     id: int
-    created_at: Optional[str] = None
+    created_at: datetime
     class Config:
         from_attributes = True
 
@@ -38,11 +25,6 @@ class Token(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
-
-class PasswordResetRequest(BaseModel):
-    username: str
-    phone: str
-    new_password: Optional[str] = "123456"
 
 # Prayer Schemas
 class PrayerCreate(BaseModel):
@@ -109,30 +91,3 @@ class DonationResponse(DonationCreate):
     created_at: datetime
     class Config:
         from_attributes = True
-
-# Media / Gallery Schemas
-class MediaBase(BaseModel):
-    title: str
-    description: Optional[str] = ""
-    media_type: str = "photo" # photo or video
-    url: str
-    thumbnail_url: Optional[str] = None
-    category: str = "Eventos" # Eventos, Cultos, Retiros, Jóvenes, Escuela Dominical
-
-class MediaCreate(MediaBase):
-    pass
-
-class MediaUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    media_type: Optional[str] = None
-    url: Optional[str] = None
-    thumbnail_url: Optional[str] = None
-    category: Optional[str] = None
-
-class MediaResponse(MediaBase):
-    id: int
-    created_at: str
-    class Config:
-        from_attributes = True
-

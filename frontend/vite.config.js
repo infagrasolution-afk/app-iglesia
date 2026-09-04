@@ -6,9 +6,12 @@ export default defineConfig({
   server: {
     port: 5174,
     host: true,
+    watch: {
+      ignored: ['**/dist/**']
+    },
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8055',
+        target: 'http://localhost:8050',
         changeOrigin: true,
       }
     }

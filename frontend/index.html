@@ -4,23 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#0F172A" />
-    <meta name="description" content="Plataforma Web y PWA Móvil de la Iglesia Restauración." />
+    <meta name="description" content="Plataforma Web y PWA Móvil Todo en Uno para Iglesia Cristiana Evangélica." />
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <title>Iglesia Restauración</title>
+    <title>Iglesia Cristiana Evangélica - PWA Portal</title>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js')
-            .then(function(reg) {
-              console.log('ServiceWorker registered successfully with scope:', reg.scope);
-            })
-            .catch(function(err) {
-              console.warn('ServiceWorker registration failed:', err);
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (var r of registrations) {
+            r.unregister().then(function(unregistered) {
+              if (unregistered) {
+                console.log('Stale Service Worker unregistered successfully.');
+                window.location.reload();
+              }
             });
+          }
         });
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            for (var name of names) caches.delete(name);
+          });
+        }
       }
     </script>
     <style>

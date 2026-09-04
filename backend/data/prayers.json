@@ -1,14 +1,50 @@
 [
   {
     "id": 1,
-    "title": "properidad y union familiar",
-    "description": "por paz, tranquilidad de la familia",
-    "author_id": 2,
-    "author_name": "Luis Garcia",
-    "is_anonymous": false,
+    "title": "Oración por restauración familiar y salud",
+    "description": "Pedimos apoyo en oración por la recuperación física de nuestro hermano Roberto y fortaleza para toda su familia en este tiempo.",
+    "author_id": null,
+    "author_name": "María González",
+    "is_anonymous": 0,
+    "visibility": "PUBLIC",
+    "status": "active",
+    "prayer_count": 14,
+    "created_at": "2026-08-19 20:13:32"
+  },
+  {
+    "id": 2,
+    "title": "Petición confidencial de dirección laboral",
+    "description": "Pido sabiduría de lo alto para tomar una decisión importante en el área laboral y familiar. Dios guíe mis pasos.",
+    "author_id": null,
+    "author_name": "Hermano(a) en Fe (Anónimo)",
+    "is_anonymous": 1,
+    "visibility": "PUBLIC",
+    "status": "active",
+    "prayer_count": 8,
+    "created_at": "2026-08-19 20:13:32"
+  },
+  {
+    "id": 3,
+    "title": "Consejería y apoyo espiritual para liderazgo",
+    "description": "Orientación solicitada para el ministerio de discipulado de adultos en el sector norte.",
+    "author_id": null,
+    "author_name": "Juan Pérez",
+    "is_anonymous": 0,
+    "visibility": "LEADERS",
+    "status": "active",
+    "prayer_count": 5,
+    "created_at": "2026-08-19 20:13:32"
+  },
+  {
+    "id": 4,
+    "title": "Agradecimiento: ¡Sanidad en la rodilla completada!",
+    "description": "Damos toda la gloria a Dios. La intervención quirúrgica fue un éxito y la rehabilitación avanza victoriosamente.",
+    "author_id": null,
+    "author_name": "Familia Morales",
+    "is_anonymous": 0,
     "visibility": "PUBLIC",
     "status": "answered",
-    "prayer_count": 2,
-    "created_at": "2026-08-20T11:08:30.049223"
+    "prayer_count": 22,
+    "created_at": "2026-08-19 20:13:32"
   }
 ]

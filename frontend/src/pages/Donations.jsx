@@ -49,12 +49,14 @@ const BANK_DETAILS = {
   mobilePay: "+58 414 1234567"
 };
 
+const PRESET_AMOUNTS = [10, 25, 50, 100, 200];
+
 export default function Donations() {
   const [activeStep, setActiveStep] = useState(0);
 
   // Step 1 State
   const [donationType, setDonationType] = useState('Diezmo');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState('50');
 
   // Step 2 State
   const [paymentMethod, setPaymentMethod] = useState('transfer');
@@ -177,11 +179,28 @@ export default function Donations() {
                   ))}
                 </RadioGroup>
 
+                <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 600 }}>
+                  Monto a Generar ($ / Moneda Local)
+                </Typography>
+
+                {/* Preset Amount Chips */}
+                <Stack direction="row" spacing={1} sx={{ mb: 2.5, flexWrap: 'wrap', gap: 1 }}>
+                  {PRESET_AMOUNTS.map((preset) => (
+                    <Chip
+                      key={preset}
+                      label={`$${preset}`}
+                      clickable
+                      color={amount === String(preset) ? 'primary' : 'default'}
+                      onClick={() => setAmount(String(preset))}
+                      sx={{ fontWeight: 600, fontSize: '0.9rem', px: 1 }}
+                    />
+                  ))}
+                </Stack>
+
                 <TextField
                   fullWidth
                   type="number"
-                  label="Monto ($ / Moneda Local)"
-                  placeholder="Ingrese el monto que desea aportar..."
+                  label="Monto Personalizado"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   InputProps={{

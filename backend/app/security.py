@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models
 
+from app.json_storage import UserStorage
+
 SECRET_KEY = "IGLESIA_EVANGELICA_SECRET_KEY_SUPER_SECURE"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
@@ -26,8 +28,6 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
-    if "sub" in to_encode and to_encode["sub"] is not None:
-        to_encode["sub"] = str(to_encode["sub"])
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -37,33 +37,10 @@ def get_current_user_optional(token: str = Depends(oauth2_scheme)):
         return None
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id_raw = payload.get("sub")
-        if user_id_raw is None:
+        user_id: int = payload.get("sub")
+        if user_id is None:
             return None
-        user_id = int(user_id_raw)
-    except Exception:
+    except jwt.PyJWTError:
         return None
-    
-    from app.json_db import UserJSONDB
-    user = UserJSONDB.get_by_id(user_id)
-    return user
-
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    user = get_current_user_optional(token)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Sesión expirada o token inválido. Por favor inicia sesión.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return user
-
-def require_admin_or_pastor(current_user: dict = Depends(get_current_user)):
-    user_role = current_user.get("role", "").upper()
-    if user_role not in ["ADMIN", "PASTOR"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Acceso denegado. Se requieren permisos de Pastor o Administrador."
-        )
-    return current_user
+    return UserStorage.find_by_id(user_id)
 
