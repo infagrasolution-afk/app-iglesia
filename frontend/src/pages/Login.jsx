@@ -47,9 +47,10 @@ export default function Login() {
   // Check user role types
   const normalizedUser = (username || '').toLowerCase().trim();
   const isOwnerUser = normalizedUser === 'linfante' || normalizedUser === 'linfante@restauracionglobal.org';
+  const isPastorSaid = normalizedUser === 'scarrasquel' || normalizedUser === 'scarrasquel@restauracionglobal.org';
   const isGeneralAdmin = normalizedUser === 'admin' || normalizedUser === 'admin@iglesia.org';
   const isSedeAdminUser = normalizedUser.startsWith('admin_');
-  const hasGlobalAccess = isOwnerUser || isGeneralAdmin;
+  const hasGlobalAccess = isOwnerUser || isPastorSaid || isGeneralAdmin;
 
   // Auto-detect sede for Sede Admins
   useEffect(() => {
@@ -102,9 +103,9 @@ export default function Login() {
       setUsername('linfante');
       setPassword('aa11..**');
       setSelectedSede('plaza-venezuela');
-    } else if (role === 'admin') {
-      setUsername('admin');
-      setPassword('admin');
+    } else if (role === 'pastor_said' || role === 'admin') {
+      setUsername('scarrasquel');
+      setPassword('said1234');
       setSelectedSede('plaza-venezuela');
     } else if (role === 'admin_sede') {
       setUsername('admin_maracay');
@@ -589,19 +590,19 @@ export default function Login() {
                 }}
               />
             </Tooltip>
-            <Tooltip title="Pastor Principal (Said Carrasquel: admin / admin)">
+            <Tooltip title="Pastor Global / Super Admin (Said Carrasquel: scarrasquel / said1234)">
               <Chip
                 size="small"
-                label="🏛️ Admin General"
-                onClick={() => handleQuickDemo('admin')}
+                label="✝️ Pastor Said (Super Admin)"
+                onClick={() => handleQuickDemo('pastor_said')}
                 sx={{
-                  backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                  backgroundColor: 'rgba(245, 158, 11, 0.25)',
                   color: '#FDE68A',
-                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  border: '1px solid rgba(245, 158, 11, 0.6)',
                   cursor: 'pointer',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   fontSize: '0.74rem',
-                  '&:hover': { backgroundColor: 'rgba(245, 158, 11, 0.35)' }
+                  '&:hover': { backgroundColor: 'rgba(245, 158, 11, 0.45)' }
                 }}
               />
             </Tooltip>

@@ -13,14 +13,27 @@
   },
   {
     "id": 1,
+    "username": "scarrasquel",
+    "email": "scarrasquel@restauracionglobal.org",
+    "full_name": "Pastor Said Carrasquel (Pastor Global / Super Admin)",
+    "password": "said1234",
+    "role": "SUPER_ADMIN",
+    "is_owner": false,
+    "is_global_pastor": true,
+    "sede": "TODAS",
+    "permissions": ["ALL", "ASSIGN_SEDE_ADMINS", "MANAGE_SEDES", "MANAGE_SYSTEM", "MANAGE_MEMBERS_GLOBAL"],
+    "created_at": "2026-08-19 20:13:32"
+  },
+  {
+    "id": 200,
     "username": "admin",
     "email": "admin@iglesia.org",
-    "full_name": "Pastor Principal Said Carrasquel (Admin General)",
-    "password": "admin",
-    "role": "ADMIN_PRINCIPAL",
+    "full_name": "Pastor Said Carrasquel (Admin General)",
+    "password": "said1234",
+    "role": "SUPER_ADMIN",
     "is_owner": false,
     "sede": "TODAS",
-    "permissions": ["ALL", "ASSIGN_SEDE_ADMINS", "MANAGE_SEDES", "MANAGE_SYSTEM"],
+    "permissions": ["ALL", "ASSIGN_SEDE_ADMINS", "MANAGE_SEDES", "MANAGE_SYSTEM", "MANAGE_MEMBERS_GLOBAL"],
     "created_at": "2026-08-19 20:13:32"
   },
   {

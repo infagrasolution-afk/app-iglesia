@@ -51,10 +51,11 @@ export function AuthProvider({ children }) {
   const login = async (email, password, selectedSede = null) => {
     const normalizedKey = (email || '').toLowerCase().trim();
 
-    // Check if user is Super Admin (Owner) or Admin Principal
+    // Check if user is Super Admin (Owner or Pastor Said) or Admin Principal
     const isOwner = normalizedKey === 'linfante' || normalizedKey === 'linfante@restauracionglobal.org';
+    const isPastorSaid = normalizedKey === 'scarrasquel' || normalizedKey === 'scarrasquel@restauracionglobal.org';
     const isGeneralAdmin = normalizedKey === 'admin' || normalizedKey === 'admin@iglesia.org';
-    const hasGlobalAccess = isOwner || isGeneralAdmin;
+    const hasGlobalAccess = isOwner || isPastorSaid || isGeneralAdmin;
 
     // Sede to assign
     const assignedSede = hasGlobalAccess ? 'TODAS' : (selectedSede || 'plaza-venezuela');
@@ -79,48 +80,78 @@ export function AuthProvider({ children }) {
     } catch (error) {
       // Default / offline credentials check
       const defaultUsers = {
-        // 1. OWNER / DUEÑO DE LA APP
+        // 1. SUPER ADMIN: DUEÑO DE LA APP (L. INFANTE)
         'linfante': {
           id: 100,
           username: 'linfante',
-          full_name: 'Ing. L. Infante (Dueño de la App)',
+          full_name: 'Ing. L. Infante (Dueño de la App / Super Admin)',
           name: 'L. Infante',
           role: 'SUPER_ADMIN',
           isOwner: true,
+          isSuperAdmin: true,
           sede: 'TODAS',
           passwordReq: 'aa11..**'
         },
         'linfante@restauracionglobal.org': {
           id: 100,
           username: 'linfante',
-          full_name: 'Ing. L. Infante (Dueño de la App)',
+          full_name: 'Ing. L. Infante (Dueño de la App / Super Admin)',
           name: 'L. Infante',
           role: 'SUPER_ADMIN',
           isOwner: true,
+          isSuperAdmin: true,
           sede: 'TODAS',
           passwordReq: 'aa11..**'
         },
 
-        // 2. PASTOR PRINCIPAL / ADMIN GENERAL
-        'admin': {
+        // 2. SUPER ADMIN: PASTOR PRINCIPAL GLOBAL (SAID CARRASQUEL)
+        'scarrasquel': {
           id: 1,
-          username: 'admin',
-          full_name: 'Pastor Principal Said Carrasquel (Admin General)',
-          name: 'Said Carrasquel',
-          role: 'ADMIN_PRINCIPAL',
+          username: 'scarrasquel',
+          full_name: 'Pastor Said Carrasquel (Pastor Global / Super Admin)',
+          name: 'Pastor Said Carrasquel',
+          role: 'SUPER_ADMIN',
           isOwner: false,
+          isSuperAdmin: true,
+          isGlobalPastor: true,
           sede: 'TODAS',
-          passwordReq: 'admin'
+          passwordReq: 'said1234'
+        },
+        'scarrasquel@restauracionglobal.org': {
+          id: 1,
+          username: 'scarrasquel',
+          full_name: 'Pastor Said Carrasquel (Pastor Global / Super Admin)',
+          name: 'Pastor Said Carrasquel',
+          role: 'SUPER_ADMIN',
+          isOwner: false,
+          isSuperAdmin: true,
+          isGlobalPastor: true,
+          sede: 'TODAS',
+          passwordReq: 'said1234'
+        },
+
+        // Alias admin
+        'admin': {
+          id: 200,
+          username: 'scarrasquel',
+          full_name: 'Pastor Said Carrasquel (Pastor Global / Super Admin)',
+          name: 'Pastor Said Carrasquel',
+          role: 'SUPER_ADMIN',
+          isOwner: false,
+          isSuperAdmin: true,
+          sede: 'TODAS',
+          passwordReq: 'said1234'
         },
         'admin@iglesia.org': {
-          id: 1,
-          username: 'admin',
-          full_name: 'Pastor Principal Said Carrasquel (Admin General)',
-          name: 'Said Carrasquel',
-          role: 'ADMIN_PRINCIPAL',
+          id: 200,
+          username: 'scarrasquel',
+          full_name: 'Pastor Said Carrasquel (Pastor Global / Super Admin)',
+          name: 'Pastor Said Carrasquel',
+          role: 'SUPER_ADMIN',
           isOwner: false,
+          isSuperAdmin: true,
           sede: 'TODAS',
-          passwordReq: 'admin'
+          passwordReq: 'said1234'
         },
 
         // 3. SEDE ADMINS
@@ -216,7 +247,8 @@ export function AuthProvider({ children }) {
         const expected = matchedUser.passwordReq;
         const isValidPass =
           password === expected ||
-          (expected === 'admin' && (password === '123456' || password === 'admin')) ||
+          (expected === 'said1234' && (password === 'said1234' || password === 'admin' || password === '123456')) ||
+          (expected === 'admin' && (password === 'said1234' || password === '123456' || password === 'admin')) ||
           (expected === '123' && (password === '123' || password === '123456')) ||
           (matchedUser.isOwner && password === 'aa11..**');
 
@@ -306,10 +338,11 @@ export function AuthProvider({ children }) {
     return list.find((s) => s.id === currentSede) || list[0];
   };
 
-  const isSuperAdmin = currentRole === 'SUPER_ADMIN' || user?.username === 'linfante';
+  const isSuperAdmin = currentRole === 'SUPER_ADMIN' || user?.username === 'linfante' || user?.username === 'scarrasquel';
   const isAdminPrincipal = isSuperAdmin || currentRole === 'ADMIN_PRINCIPAL' || currentRole === 'ADMIN';
   const isSedeAdmin = currentRole === 'ADMIN_SEDE';
   const canManageAllSedes = isSuperAdmin || isAdminPrincipal;
+  const canCreateMembers = canManageAllSedes || isSedeAdmin;
 
   return (
     <AuthContext.Provider
@@ -325,6 +358,7 @@ export function AuthProvider({ children }) {
         isAdminPrincipal,
         isSedeAdmin,
         canManageAllSedes,
+        canCreateMembers,
         isAdmin: canManageAllSedes || isSedeAdmin,
         login,
         logout,

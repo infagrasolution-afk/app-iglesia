@@ -50,7 +50,7 @@ import { SEDES_LIST } from '../data/sedesData';
 import { membersAPI } from '../services/api';
 
 export default function Members() {
-  const { user, currentRole, currentSede, canManageAllSedes, isSedeAdmin, isAdmin } = useAuth();
+  const { user, currentRole, currentSede, canManageAllSedes, isSedeAdmin, canCreateMembers, isAdmin } = useAuth();
 
   // Selected Sede filter in directory view
   const [selectedSedeFilter, setSelectedSedeFilter] = useState(() => {
@@ -103,6 +103,11 @@ export default function Members() {
 
   // Open modal handler
   const handleOpenCreateModal = () => {
+    if (!canCreateMembers) {
+      setSnackbar({ open: true, message: 'Acceso denegado: Solo los administradores de sede y los superadmins pueden registrar miembros.', severity: 'error' });
+      return;
+    }
+
     const targetSede = canManageAllSedes 
       ? (selectedSedeFilter !== 'TODAS' ? selectedSedeFilter : 'plaza-venezuela')
       : (user?.sede || 'maracay');
@@ -129,6 +134,10 @@ export default function Members() {
   // Submit new member
   const handleSubmitMember = async (e) => {
     e.preventDefault();
+    if (!canCreateMembers) {
+      setSnackbar({ open: true, message: 'No estás autorizado para registrar miembros.', severity: 'error' });
+      return;
+    }
     if (!formData.full_name.trim()) {
       setSnackbar({ open: true, message: 'Por favor ingresa el nombre completo del miembro', severity: 'warning' });
       return;
@@ -250,7 +259,15 @@ export default function Members() {
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 <Chip
                   icon={canManageAllSedes ? <GlobalIcon sx={{ color: '#FCD34D !important', fontSize: 16 }} /> : <ShieldIcon sx={{ color: '#6EE7B7 !important', fontSize: 16 }} />}
-                  label={canManageAllSedes ? "ROL: SUPERADMIN / DUEÑO (Acceso a Todas las Sedes)" : `ADMINISTRADOR DE SEDE (${user?.sede?.toUpperCase() || 'LOCAL'})`}
+                  label={canManageAllSedes 
+                    ? (user?.username === 'scarrasquel' 
+                        ? "ROL: SUPERADMIN (Pastor Said Carrasquel - Todas las Sedes)" 
+                        : user?.username === 'linfante' 
+                          ? "ROL: SUPERADMIN / DUEÑO (L. Infante - Todas las Sedes)" 
+                          : "ROL: SUPERADMIN (Nacional / Todas las Sedes)")
+                    : (isSedeAdmin 
+                        ? `ADMINISTRADOR DE SEDE (${user?.sede?.toUpperCase() || 'LOCAL'})`
+                        : `CONSULTA DE DIRECTORIO (${currentRole})`)}
                   size="small"
                   sx={{
                     backgroundColor: 'rgba(255, 255, 255, 0.15)',
@@ -267,13 +284,15 @@ export default function Members() {
               </Typography>
               <Typography variant="body2" sx={{ color: '#E2E8F0', mt: 0.8, maxWidth: 680 }}>
                 {canManageAllSedes
-                  ? 'Como Superadmin tienes potestad nacional para registrar y gestionar nuevos miembros en cualquiera de las 5 sedes de Restauración.'
-                  : `Como Administrador de Sede puedes registrar y administrar a los miembros de tu congregación local.`}
+                  ? 'Como Superadmin (Pastor Said Carrasquel / Linfante) tienes potestad nacional para registrar y gestionar miembros en cualquiera de las 5 sedes de Restauración.'
+                  : (isSedeAdmin 
+                      ? `Como Administrador de Sede puedes registrar y administrar a los miembros de tu congregación local (${user?.sede?.toUpperCase()}).`
+                      : 'Directorio congregacional de miembros de la iglesia.')}
               </Typography>
             </Box>
 
-            {/* Add Member CTA Button */}
-            {isAdmin && (
+            {/* Add Member CTA Button - SOLO SUPERADMINS Y ADMINS DE SEDE */}
+            {canCreateMembers && (
               <Button
                 variant="contained"
                 size="large"
