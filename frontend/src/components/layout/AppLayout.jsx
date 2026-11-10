@@ -49,7 +49,7 @@ const DRAWER_WIDTH = 260;
 
 const NAV_ITEMS = [
   { label: 'Muro de Oración', shortLabel: 'Oración', path: '/prayers', icon: <PrayerIcon /> },
-  { label: 'Padrón de Miembros', shortLabel: 'Miembros', path: '/members', icon: <PeopleIcon sx={{ color: '#0D9488' }} /> },
+  { label: 'Directorio de Miembros', shortLabel: 'Directorio', path: '/members', icon: <PeopleIcon sx={{ color: '#0D9488' }} /> },
   { label: 'Discipulado Bíblico', shortLabel: 'Discipulado', path: '/discipleship', icon: <DiscipleshipIcon sx={{ color: '#2563EB' }} /> },
   { label: 'Frasco de Emociones', shortLabel: 'Emociones', path: '/emotions', icon: <EmotionsIcon sx={{ color: '#F472B6' }} /> },
   { label: 'Santa Biblia (3 Versiones)', shortLabel: 'Biblia', path: '/bible', icon: <BibleIcon /> },

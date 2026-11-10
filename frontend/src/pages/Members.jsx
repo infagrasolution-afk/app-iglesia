@@ -263,7 +263,7 @@ export default function Members() {
                 />
               </Stack>
               <Typography variant="h4" sx={{ fontWeight: 800, fontSize: { xs: '1.5rem', md: '2rem' }, lineHeight: 1.2 }}>
-                Directorio y Padrón de Miembros
+                Directorio de Miembros
               </Typography>
               <Typography variant="body2" sx={{ color: '#E2E8F0', mt: 0.8, maxWidth: 680 }}>
                 {canManageAllSedes
@@ -445,7 +445,7 @@ export default function Members() {
       {loading ? (
         <Box sx={{ textAlign: 'center', py: 6 }}>
           <CircularProgress sx={{ color: '#83050B' }} />
-          <Typography sx={{ mt: 2, color: '#64748B' }}>Cargando padrón de miembros...</Typography>
+          <Typography sx={{ mt: 2, color: '#64748B' }}>Cargando directorio de miembros...</Typography>
         </Box>
       ) : filteredMembers.length === 0 ? (
         <Paper sx={{ p: 5, textAlign: 'center', borderRadius: 3, border: '1px dashed #CBD5E1' }}>
@@ -643,7 +643,7 @@ export default function Members() {
                 Registrar Nuevo Miembro
               </Typography>
               <Typography variant="caption" sx={{ color: '#64748B' }}>
-                Padrón oficial de la Iglesia Cristiana Evangélica Restauración
+                Directorio oficial de la Iglesia Cristiana Evangélica Restauración
               </Typography>
             </Box>
             <IconButton onClick={handleCloseModal} size="small">

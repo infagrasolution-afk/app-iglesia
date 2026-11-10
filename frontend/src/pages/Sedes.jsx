@@ -480,7 +480,7 @@ export default function Sedes() {
                         }
                       }}
                     >
-                      Padrón de Miembros
+                      Directorio de Miembros
                     </Button>
 
                     {canManageAllSedes && (
