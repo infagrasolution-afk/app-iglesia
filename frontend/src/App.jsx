@@ -13,6 +13,8 @@ import Sermons from './pages/Sermons';
 import Donations from './pages/Donations';
 import Emotions from './pages/Emotions';
 import Discipleship from './pages/Discipleship';
+import Sedes from './pages/Sedes';
+import AboutUs from './pages/AboutUs';
 
 function ProtectedAppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -31,6 +33,9 @@ function ProtectedAppRoutes() {
         <Route path="/emotions" element={<Emotions />} />
         <Route path="/frasco" element={<Navigate to="/emotions" replace />} />
         <Route path="/bible" element={<Bible />} />
+        <Route path="/sedes" element={<Sedes />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/nosotros" element={<Navigate to="/about" replace />} />
         <Route path="/announcements" element={<Announcements />} />
         <Route path="/sermons" element={<Sermons />} />
         <Route path="/donations" element={<Donations />} />

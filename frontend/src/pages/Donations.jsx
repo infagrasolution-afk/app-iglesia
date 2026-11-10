@@ -37,22 +37,25 @@ import {
   PhoneAndroid as MobilePayIcon,
   History as HistoryIcon,
   ArrowForward as NextIcon,
-  ArrowBack as BackIcon
+  ArrowBack as BackIcon,
+  LocationOn as LocationIcon
 } from '@mui/icons-material';
 import { donationAPI } from '../services/api';
-
-const BANK_DETAILS = {
-  bankName: "Banco Nacional / Internacional",
-  accountHolder: "Iglesia Cristiana Evangélica A.R.",
-  accountNumber: "0102-0123-45-0100012345",
-  taxId: "J-30982341-0",
-  mobilePay: "+58 414 1234567"
-};
+import { SEDES_LIST } from '../data/sedesData';
+import { useAuth } from '../context/AuthContext';
 
 const PRESET_AMOUNTS = [10, 25, 50, 100, 200];
 
 export default function Donations() {
+  const { currentSede } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
+
+  // Sede selection for donation
+  const [targetSedeId, setTargetSedeId] = useState(() => {
+    return (currentSede && currentSede !== 'TODAS') ? currentSede : 'plaza-venezuela';
+  });
+
+  const selectedSedeObj = SEDES_LIST.find((s) => s.id === targetSedeId) || SEDES_LIST[0];
 
   // Step 1 State
   const [donationType, setDonationType] = useState('Diezmo');
@@ -149,18 +152,37 @@ export default function Donations() {
               <Step><StepLabel>Recibo Digital</StepLabel></Step>
             </Stepper>
 
-            {/* STEP 1: Select Type & Amount */}
+            {/* STEP 1: Select Sede, Type & Amount */}
             {activeStep === 0 && (
               <Box>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                  1. Selecciona el Tipo de Aporte
+                {/* Sede Selector */}
+                <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, fontSize: '0.98rem' }}>
+                  1. Sede Destino de Restauración Global
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ mb: 2.5, flexWrap: 'wrap', gap: 1 }}>
+                  {SEDES_LIST.map((sede) => (
+                    <Chip
+                      key={sede.id}
+                      icon={<LocationIcon sx={{ fontSize: '0.9rem !important' }} />}
+                      label={sede.shortName}
+                      clickable
+                      color={targetSedeId === sede.id ? 'primary' : 'default'}
+                      variant={targetSedeId === sede.id ? 'filled' : 'outlined'}
+                      onClick={() => setTargetSedeId(sede.id)}
+                      sx={{ fontWeight: 600, py: 1.8, borderRadius: '8px' }}
+                    />
+                  ))}
+                </Stack>
+
+                <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 600, fontSize: '0.98rem' }}>
+                  2. Selecciona el Tipo de Aporte
                 </Typography>
 
                 <RadioGroup
                   row
                   value={donationType}
                   onChange={(e) => setDonationType(e.target.value)}
-                  sx={{ mb: 3, gap: 1 }}
+                  sx={{ mb: 2.5, gap: 1 }}
                 >
                   {['Diezmo', 'Ofrenda', 'Pro-Templo'].map((t) => (
                     <Paper
@@ -168,23 +190,23 @@ export default function Donations() {
                       variant="outlined"
                       sx={{
                         px: 2,
-                        py: 1,
+                        py: 0.8,
                         borderRadius: '8px',
-                        borderColor: donationType === t ? '#0F172A' : '#E2E8F0',
-                        backgroundColor: donationType === t ? 'rgba(15, 23, 42, 0.04)' : '#FFFFFF'
+                        borderColor: donationType === t ? '#83050B' : '#E2E8F0',
+                        backgroundColor: donationType === t ? 'rgba(131, 5, 11, 0.05)' : '#FFFFFF'
                       }}
                     >
-                      <FormControlLabel value={t} control={<Radio color="primary" />} label={t} />
+                      <FormControlLabel value={t} control={<Radio sx={{ '&.Mui-checked': { color: '#83050B' } }} />} label={t} />
                     </Paper>
                   ))}
                 </RadioGroup>
 
-                <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 600 }}>
-                  Monto a Generar ($ / Moneda Local)
+                <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 600, fontSize: '0.98rem' }}>
+                  3. Monto a Generar ($ / Moneda Local)
                 </Typography>
 
                 {/* Preset Amount Chips */}
-                <Stack direction="row" spacing={1} sx={{ mb: 2.5, flexWrap: 'wrap', gap: 1 }}>
+                <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
                   {PRESET_AMOUNTS.map((preset) => (
                     <Chip
                       key={preset}
@@ -212,7 +234,7 @@ export default function Donations() {
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <Button
                     variant="contained"
-                    color="primary"
+                    sx={{ backgroundColor: '#83050B', '&:hover': { backgroundColor: '#650409' } }}
                     endIcon={<NextIcon />}
                     onClick={handleNext}
                     disabled={!amount || parseFloat(amount) <= 0}
@@ -223,45 +245,50 @@ export default function Donations() {
               </Box>
             )}
 
-            {/* STEP 2: Bank details and fast copy */}
+            {/* STEP 2: Bank details for selected sede */}
             {activeStep === 1 && (
               <Box component="form" onSubmit={handleSubmitDonation}>
-                <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-                  2. Datos Bancarios para Transferencia Rápida
+                <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 700 }}>
+                  Datos Bancarios y Pago Móvil: {selectedSedeObj.name}
                 </Typography>
 
                 <Typography variant="body2" sx={{ color: '#64748B', mb: 2.5 }}>
-                  Haz clic en el botón de copiar para pegar rápidamente los datos en la app de tu banco:
+                  Haz clic en el botón de copiar para pegar rápidamente los datos oficiales en tu banco:
                 </Typography>
 
                 {/* Quick Copy Box */}
-                <Paper variant="outlined" sx={{ p: 2.5, mb: 3, backgroundColor: '#F8FAFC' }}>
+                <Paper variant="outlined" sx={{ p: 2.5, mb: 3, backgroundColor: '#F8FAFC', borderRadius: '14px', border: '1px solid #CBD5E1' }}>
                   <Stack spacing={1.5}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body2" sx={{ color: '#64748B' }}>Banco Receptor:</Typography>
+                      <Chip label={selectedSedeObj.donation.bank} size="small" sx={{ fontWeight: 700, backgroundColor: '#FFFFFF' }} />
+                    </Box>
+                    <Divider />
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="body2" sx={{ color: '#64748B' }}>Titular:</Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{BANK_DETAILS.accountHolder}</Typography>
-                        <IconButton size="small" onClick={() => handleCopy(BANK_DETAILS.accountHolder, 'Titular')}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{selectedSedeObj.donation.accountHolder}</Typography>
+                        <IconButton size="small" onClick={() => handleCopy(selectedSedeObj.donation.accountHolder, 'Titular')}>
                           <CopyIcon fontSize="small" />
                         </IconButton>
                       </Box>
                     </Box>
                     <Divider />
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="body2" sx={{ color: '#64748B' }}>Cuenta Bancaria:</Typography>
+                      <Typography variant="body2" sx={{ color: '#64748B' }}>Cédula / RIF:</Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace' }}>{BANK_DETAILS.accountNumber}</Typography>
-                        <IconButton size="small" onClick={() => handleCopy(BANK_DETAILS.accountNumber, 'Número de Cuenta')}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{selectedSedeObj.donation.taxId}</Typography>
+                        <IconButton size="small" onClick={() => handleCopy(selectedSedeObj.donation.taxId, 'Cédula / RIF')}>
                           <CopyIcon fontSize="small" />
                         </IconButton>
                       </Box>
                     </Box>
                     <Divider />
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="body2" sx={{ color: '#64748B' }}>RUC / Tax ID:</Typography>
+                      <Typography variant="body2" sx={{ color: '#64748B' }}>Teléfono Pago Móvil:</Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{BANK_DETAILS.taxId}</Typography>
-                        <IconButton size="small" onClick={() => handleCopy(BANK_DETAILS.taxId, 'RUC / Tax ID')}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#059669', fontFamily: 'monospace' }}>{selectedSedeObj.donation.phone}</Typography>
+                        <IconButton size="small" onClick={() => handleCopy(selectedSedeObj.donation.phone, 'Teléfono Pago Móvil')}>
                           <CopyIcon fontSize="small" />
                         </IconButton>
                       </Box>

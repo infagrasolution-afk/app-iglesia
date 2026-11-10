@@ -12,15 +12,25 @@ import {
   Alert,
   CircularProgress,
   Fade,
-  Avatar
+  Avatar,
+  FormControl,
+  Select,
+  MenuItem,
+  Chip,
+  Tooltip
 } from '@mui/material';
 import {
   PersonOutline as UserIcon,
   LockOutlined as LockIcon,
   Visibility,
-  VisibilityOff
+  VisibilityOff,
+  LocationOn as LocationIcon,
+  Public as GlobalIcon,
+  Language as WebIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
+import { SEDES_LIST, CHURCH_INFO } from '../data/sedesData';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -28,10 +38,15 @@ export default function Login() {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [selectedSede, setSelectedSede] = useState('plaza-venezuela');
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Check if current input is admin
+  const normalizedUser = (username || '').toLowerCase().trim();
+  const isAdminUser = normalizedUser === 'admin' || normalizedUser === 'admin@iglesia.org';
 
   // If already authenticated, redirect to portal
   useEffect(() => {
@@ -45,13 +60,19 @@ export default function Login() {
     setErrorMsg('');
 
     if (!username || !password) {
-      setErrorMsg('Por favor completa todos los campos.');
+      setErrorMsg('Por favor completa tu usuario y contraseña.');
+      return;
+    }
+
+    // If not admin, require a valid sede
+    if (!isAdminUser && !selectedSede) {
+      setErrorMsg('Debes indicar a qué sede de Restauración Global perteneces.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await login(username, password);
+      const res = await login(username, password, isAdminUser ? 'TODAS' : selectedSede);
       if (res.success) {
         navigate('/prayers');
       } else {
@@ -62,6 +83,23 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleQuickDemo = (role, defaultSede) => {
+    if (role === 'admin') {
+      setUsername('admin');
+      setPassword('admin');
+      setSelectedSede('plaza-venezuela');
+    } else if (role === 'lider') {
+      setUsername('lider');
+      setPassword('123');
+      setSelectedSede(defaultSede || 'plaza-venezuela');
+    } else {
+      setUsername('miembro');
+      setPassword('123');
+      setSelectedSede(defaultSede || 'maracay');
+    }
+    setErrorMsg('');
   };
 
   return (
@@ -78,37 +116,37 @@ export default function Login() {
         backgroundPosition: 'center top',
         backgroundRepeat: 'no-repeat',
         backgroundColor: '#0A1128',
-        p: 2,
+        p: { xs: 2, sm: 3 },
         overflow: 'hidden'
       }}
     >
-      {/* Soft dark vignette to focus on the center lamp and glass card */}
+      {/* Soft dark vignette */}
       <Box
         sx={{
           position: 'absolute',
           inset: 0,
-          background: 'radial-gradient(ellipse at 50% 18%, rgba(255, 200, 110, 0.22) 0%, rgba(10, 17, 40, 0.45) 45%, rgba(6, 10, 25, 0.92) 100%)',
+          background: 'radial-gradient(ellipse at 50% 18%, rgba(255, 200, 110, 0.22) 0%, rgba(10, 17, 40, 0.55) 45%, rgba(6, 10, 25, 0.94) 100%)',
           pointerEvents: 'none',
           zIndex: 1
         }}
       />
 
-      {/* Luminous Warm Light Beam overlay streaming from lamp */}
+      {/* Luminous Warm Light Beam overlay */}
       <Box
         sx={{
           position: 'absolute',
           top: 0,
           left: '50%',
           transform: 'translateX(-50%)',
-          width: { xs: '340px', sm: '480px' },
-          height: { xs: '380px', sm: '500px' },
+          width: { xs: '340px', sm: '520px' },
+          height: { xs: '380px', sm: '520px' },
           background: 'radial-gradient(ellipse at top, rgba(255, 220, 140, 0.35) 0%, rgba(255, 190, 80, 0.12) 35%, rgba(0,0,0,0) 70%)',
           pointerEvents: 'none',
           zIndex: 1
         }}
       />
 
-      {/* FROSTED GLASS CARD (Glassmorphism as in the reference image) */}
+      {/* FROSTED GLASS CARD */}
       <Box
         component="form"
         onSubmit={handleSubmit}
@@ -116,15 +154,15 @@ export default function Login() {
           position: 'relative',
           zIndex: 2,
           width: '100%',
-          maxWidth: '390px',
-          mt: { xs: 4, sm: 6 },
-          p: { xs: 3.5, sm: 4.5 },
+          maxWidth: '430px',
+          my: { xs: 2, sm: 4 },
+          p: { xs: 3, sm: 4 },
           borderRadius: '26px',
           background: 'rgba(255, 255, 255, 0.08)',
           backdropFilter: 'blur(22px) saturate(190%)',
           WebkitBackdropFilter: 'blur(22px) saturate(190%)',
           border: '1px solid rgba(255, 255, 255, 0.22)',
-          borderTop: '1px solid rgba(255, 235, 180, 0.45)', // Catches the top lamp light
+          borderTop: '1px solid rgba(255, 235, 180, 0.45)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 30px rgba(255, 210, 120, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.3)',
           display: 'flex',
           flexDirection: 'column',
@@ -132,17 +170,16 @@ export default function Login() {
           textAlign: 'center'
         }}
       >
-        {/* Church Logo Image at Top (Circular badge with soft warm halo) */}
+        {/* Church Logo Image at Top */}
         <Box
           sx={{
             position: 'relative',
-            mb: 1.8,
+            mb: 1.5,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}
         >
-          {/* Outer glowing ring */}
           <Box
             sx={{
               position: 'absolute',
@@ -155,7 +192,7 @@ export default function Login() {
           />
           <Avatar
             src="/logo.png"
-            alt="Restauración"
+            alt="Restauración Global"
             sx={{
               width: 68,
               height: 68,
@@ -174,32 +211,34 @@ export default function Login() {
           />
         </Box>
 
-        {/* Church Name "Restauración" replacing "Login" */}
+        {/* Church Name & Slogan from restauracionglobal.org */}
         <Typography
           variant="h4"
           sx={{
             color: '#FFFFFF',
-            fontWeight: 700,
-            fontSize: { xs: '1.85rem', sm: '2.1rem' },
+            fontWeight: 800,
+            fontSize: { xs: '1.65rem', sm: '1.9rem' },
             letterSpacing: '-0.02em',
             textShadow: '0 2px 10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 255, 255, 0.25)',
-            mb: 0.4
+            mb: 0.3
           }}
         >
-          Restauración
+          {CHURCH_INFO.name}
         </Typography>
 
         <Typography
           variant="body2"
           sx={{
-            color: 'rgba(255, 255, 255, 0.72)',
-            fontSize: '0.85rem',
-            fontWeight: 400,
-            mb: 3,
-            textShadow: '0 1px 4px rgba(0, 0, 0, 0.4)'
+            color: '#FDE047',
+            fontSize: '0.86rem',
+            fontWeight: 600,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            mb: 2,
+            textShadow: '0 1px 6px rgba(0, 0, 0, 0.6)'
           }}
         >
-
+          «{CHURCH_INFO.slogan}»
         </Typography>
 
         {/* Error Alert */}
@@ -210,13 +249,14 @@ export default function Login() {
               onClose={() => setErrorMsg('')}
               sx={{
                 width: '100%',
-                mb: 2.2,
+                mb: 2,
                 borderRadius: '16px',
-                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                backgroundColor: 'rgba(239, 68, 68, 0.25)',
                 backdropFilter: 'blur(10px)',
                 color: '#FEE2E2',
                 border: '1px solid rgba(239, 68, 68, 0.4)',
                 fontSize: '0.84rem',
+                textAlign: 'left',
                 '& .MuiAlert-icon': { color: '#F87171' }
               }}
             >
@@ -225,11 +265,11 @@ export default function Login() {
           </Fade>
         )}
 
-        {/* Username / Email Input (Frosted glass pill with user icon on the right) */}
+        {/* Username / Email Input */}
         <TextField
           fullWidth
           name="usuario"
-          placeholder="Usuario"
+          placeholder="Usuario o Correo"
           value={username}
           onChange={(e) => {
             setUsername(e.target.value);
@@ -245,7 +285,7 @@ export default function Login() {
           sx={glassInputStyles}
         />
 
-        {/* Password Input (Frosted glass pill with lock icon on the right) */}
+        {/* Password Input */}
         <TextField
           fullWidth
           name="contraseña"
@@ -270,8 +310,114 @@ export default function Login() {
               </InputAdornment>
             )
           }}
-          sx={{ ...glassInputStyles, mt: 1.8 }}
+          sx={{ ...glassInputStyles, mt: 1.6 }}
         />
+
+        {/* SEDE SELECTION SECTION */}
+        <Box sx={{ width: '100%', mt: 1.8, textAlign: 'left' }}>
+          {isAdminUser ? (
+            /* Admin Notification: Global Access */
+            <Box
+              sx={{
+                p: 1.4,
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.15) 100%)',
+                border: '1px solid rgba(245, 158, 11, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.2
+              }}
+            >
+              <GlobalIcon sx={{ color: '#FCD34D', fontSize: 26 }} />
+              <Box>
+                <Typography sx={{ color: '#FEF3C7', fontWeight: 700, fontSize: '0.82rem', lineHeight: 1.2 }}>
+                  Acceso de Administrador Global
+                </Typography>
+                <Typography sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.74rem' }}>
+                  El usuario admin tiene vista y control de <strong>todas las sedes</strong> nacionales.
+                </Typography>
+              </Box>
+            </Box>
+          ) : (
+            /* Non-Admin Requirement: Select Sede */
+            <Box>
+              <Typography
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.95)',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  mb: 0.6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.6
+                }}
+              >
+                <LocationIcon sx={{ fontSize: 16, color: '#38BDF8' }} />
+                ¿A qué sede perteneces? <span style={{ color: '#F87171' }}>*</span>
+              </Typography>
+              <FormControl fullWidth size="small">
+                <Select
+                  value={selectedSede}
+                  onChange={(e) => setSelectedSede(e.target.value)}
+                  sx={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                    borderRadius: '50px',
+                    color: '#FFFFFF',
+                    fontSize: '0.88rem',
+                    fontWeight: 500,
+                    height: '46px',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'rgba(255, 255, 255, 0.3)'
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'rgba(255, 255, 255, 0.6)'
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#38BDF8',
+                      boxShadow: '0 0 12px rgba(56, 189, 248, 0.4)'
+                    },
+                    '& .MuiSvgIcon-root': {
+                      color: '#FFFFFF'
+                    }
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        backgroundColor: '#0F172A',
+                        color: '#FFFFFF',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '16px',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.8)'
+                      }
+                    }
+                  }}
+                >
+                  {SEDES_LIST.map((sede) => (
+                    <MenuItem
+                      key={sede.id}
+                      value={sede.id}
+                      sx={{
+                        py: 1.2,
+                        borderBottom: '1px solid rgba(255,255,255,0.06)',
+                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' },
+                        '&.Mui-selected': { backgroundColor: 'rgba(56, 189, 248, 0.2) !important' }
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Typography sx={{ fontWeight: 600, fontSize: '0.88rem', color: '#FFFFFF' }}>
+                          {sede.name}
+                        </Typography>
+                        <Typography sx={{ fontSize: '0.74rem', color: '#94A3B8' }}>
+                          {sede.city} • {sede.scheduleShort}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+          )}
+        </Box>
 
         {/* Remember me & Forgot password Row */}
         <Box
@@ -280,8 +426,8 @@ export default function Login() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            mt: 1.5,
-            mb: 2.8,
+            mt: 1.2,
+            mb: 2.2,
             px: 0.5
           }}
         >
@@ -301,18 +447,18 @@ export default function Login() {
               />
             }
             label={
-              <Typography sx={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.84rem', userSelect: 'none' }}>
-                Remember me
+              <Typography sx={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.82rem', userSelect: 'none' }}>
+                Recordarme
               </Typography>
             }
             sx={{ m: 0 }}
           />
 
           <Typography
-            onClick={() => setErrorMsg('Comunícate con el pastor o administrador para restablecer tu contraseña.')}
+            onClick={() => setErrorMsg('Comunícate con el pastor o administrador de tu sede para asistencia con tu contraseña.')}
             sx={{
               color: 'rgba(255, 255, 255, 0.85)',
-              fontSize: '0.84rem',
+              fontSize: '0.82rem',
               cursor: 'pointer',
               userSelect: 'none',
               transition: 'all 0.2s',
@@ -322,11 +468,11 @@ export default function Login() {
               }
             }}
           >
-            Forgot password?
+            ¿Olvidaste tu clave?
           </Typography>
         </Box>
 
-        {/* Primary Action Button (White Rounded Pill Button matching the reference) */}
+        {/* Primary Action Button */}
         <Button
           type="submit"
           fullWidth
@@ -336,7 +482,7 @@ export default function Login() {
             borderRadius: '50px',
             backgroundColor: '#FFFFFF',
             color: '#0F172A',
-            fontWeight: 700,
+            fontWeight: 800,
             fontSize: '1rem',
             textTransform: 'none',
             letterSpacing: '0.01em',
@@ -352,14 +498,90 @@ export default function Login() {
             }
           }}
         >
-          {loading ? <CircularProgress size={22} sx={{ color: '#0F172A' }} /> : 'Login'}
+          {loading ? <CircularProgress size={22} sx={{ color: '#0F172A' }} /> : 'Iniciar Sesión'}
         </Button>
+
+        {/* Quick Demo Access Chips */}
+        <Box sx={{ mt: 2.2, width: '100%' }}>
+          <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.72rem', mb: 0.8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Acceso Rápido para Pruebas:
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 0.8, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Tooltip title="Admin con acceso global a todas las sedes">
+              <Chip
+                size="small"
+                label="👑 Admin (Global)"
+                onClick={() => handleQuickDemo('admin')}
+                sx={{
+                  backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                  color: '#FDE68A',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.74rem',
+                  '&:hover': { backgroundColor: 'rgba(245, 158, 11, 0.35)' }
+                }}
+              />
+            </Tooltip>
+            <Tooltip title="Líder ministerial en Sede Plaza Venezuela">
+              <Chip
+                size="small"
+                label="👥 Líder (Plaza Vzla)"
+                onClick={() => handleQuickDemo('lider', 'plaza-venezuela')}
+                sx={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                  color: '#BFDBFE',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.74rem',
+                  '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.35)' }
+                }}
+              />
+            </Tooltip>
+            <Tooltip title="Miembro / Discípulo en Sede Maracay">
+              <Chip
+                size="small"
+                label="🌱 Miembro (Maracay)"
+                onClick={() => handleQuickDemo('miembro', 'maracay')}
+                sx={{
+                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                  color: '#A7F3D0',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.74rem',
+                  '&:hover': { backgroundColor: 'rgba(16, 185, 129, 0.35)' }
+                }}
+              />
+            </Tooltip>
+          </Box>
+        </Box>
+
+        {/* Website link */}
+        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 0.6 }}>
+          <WebIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 16 }} />
+          <Typography
+            component="a"
+            href="https://www.restauracionglobal.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: '0.76rem',
+              textDecoration: 'none',
+              '&:hover': { color: '#FFFFFF', textDecoration: 'underline' }
+            }}
+          >
+            www.restauracionglobal.org
+          </Typography>
+        </Box>
       </Box>
     </Box>
   );
 }
 
-// Glassmorphism input styling matching the reference image
+// Glassmorphism input styling
 const glassInputStyles = {
   '& .MuiOutlinedInput-root': {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',

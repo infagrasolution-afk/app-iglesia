@@ -1,0 +1,151 @@
+{
+  "church": {
+    "name": "Iglesia Restauración Global",
+    "slogan": "Una comunidad de fe viva",
+    "founded": "7 de marzo de 2007",
+    "foundation_city": "Caracas, Venezuela",
+    "global_pastors": "Said Carrasquel y Yerutza Reyes de Carrasquel",
+    "website": "https://www.restauracionglobal.org",
+    "youtube": "https://www.youtube.com/@restauracionglobal",
+    "instagram": "https://www.instagram.com/restauracionglobal",
+    "prayer_schedule": "Lunes, Martes, Jueves y Viernes a las 8:00 pm vía Google Meet",
+    "denomination": "Pentecostal Bíblica (Sola Scriptura y mover del Espíritu Santo)",
+    "mission": "Ser discípulos que hacen discípulos que hagan discípulos (Hacia Dios, Hacia el individuo, Hacia la sociedad)",
+    "vision": "Ser una iglesia caracterizada por el crecimiento constante en la formación de líderes íntegros y la transformación de la cultura a través del fundamento de la palabra.",
+    "governance": "Equipo Ministerial Plural y Teocrático con Rendición de Cuentas"
+  },
+  "sedes": [
+    {
+      "id": "plaza-venezuela",
+      "name": "Restauración Plaza Venezuela",
+      "short_name": "Plaza Venezuela",
+      "type": "Sede Principal Nacional",
+      "city": "Caracas",
+      "state": "Distrito Capital",
+      "location": "Centro de Caracas, Plaza Venezuela",
+      "pastors": "Said y Yerutza de Carrasquel (Pastores Globales)",
+      "ministerial_team": "Alexander López y Yenileth Mijares (con apoyo en transición de Daniel Osorio y Dairis Medina)",
+      "schedule": "Domingos 10:00 am",
+      "description": "Ubicada en el centro de Caracas, Restauración Plaza Venezuela es la nueva Sede Principal del ministerio a nivel nacional. Un espacio de puertas abiertas y punto céntrico para toda la familia, enfocado en recibir con amor y sin juicios para sanar, restaurar y alinear al diseño original de Dios.",
+      "social_links": {
+        "instagram": "@restauracionglobal",
+        "instagram_url": "https://www.instagram.com/restauracionglobal",
+        "pastor_said": "@saidcarrasquel",
+        "pastora_yerutza": "@yerutzareyes",
+        "pastor_yenileth": "@ftyenilethmijares"
+      },
+      "donation": {
+        "bank": "Banco Exterior",
+        "tax_id": "V-18599632",
+        "phone": "0414-3172261",
+        "account_holder": "Iglesia Restauración Global"
+      },
+      "color": "#83050B",
+      "badge": "Principal"
+    },
+    {
+      "id": "maracay",
+      "name": "Restauración Maracay",
+      "short_name": "Maracay",
+      "type": "Sede Regional Aragua",
+      "city": "Maracay",
+      "state": "Aragua",
+      "location": "C.C. Parque Aragua, Maracay",
+      "pastors": "Wilmer y Mariangel",
+      "ministerial_team": "Bajo la mentoría directa de Said y Yerutza de Carrasquel",
+      "schedule": "Sábados 2:00 pm",
+      "description": "Con apenas 1 año de fundación, la sede Maracay se ha convertido en el epicentro de una generación vibrante en la ciudad. Ubicada estratégicamente en el C.C. Parque Aragua, es conocida por su ambiente jovial, fresco y dinámico, punto de reunión por excelencia para jóvenes y profesionales que desean conectar con su propósito.",
+      "social_links": {
+        "instagram": "@restauracionmaracay",
+        "instagram_url": "https://www.instagram.com/restauracionmaracay"
+      },
+      "donation": {
+        "bank": "Banplus",
+        "tax_id": "V-18599632",
+        "phone": "0414-3172261",
+        "account_holder": "Restauración Maracay"
+      },
+      "color": "#2563EB",
+      "badge": "Jóvenes & Profesionales"
+    },
+    {
+      "id": "la-suiza",
+      "name": "Restauración La Suiza",
+      "short_name": "La Suiza",
+      "type": "Sede Comunitaria & Creativa",
+      "city": "Caracas / Miranda",
+      "state": "Miranda",
+      "location": "Sector La Suiza",
+      "pastors": "Moisés Gómez y Angelin Gómez",
+      "ministerial_team": "Ministerio de Artes y Alabanza",
+      "schedule": "Domingos 10:00 am",
+      "description": "Con una sólida trayectoria de 10 años de fundación, se ha consolidado como un faro de luz en su comunidad. Caracterizada por un auge de crecimiento juvenil, ha hecho de las artes (música, danza y expresiones creativas) su lenguaje para expandir el Reino de Dios, transformando el entorno comunitario con madurez en fundamentos y juventud en espíritu.",
+      "social_links": {
+        "instagram": "@restauracionlasuiza",
+        "instagram_url": "https://www.instagram.com/restauracionlasuiza",
+        "pastor_moises": "@moisesgomez9393"
+      },
+      "donation": {
+        "bank": "Banesco",
+        "tax_id": "V-24456844",
+        "phone": "0424-2152572",
+        "account_holder": "Restauración La Suiza"
+      },
+      "color": "#7C3AED",
+      "badge": "Artes & Alabanza"
+    },
+    {
+      "id": "sucre",
+      "name": "Restauración Sucre",
+      "short_name": "Sucre (Petare)",
+      "type": "Sede Familiar",
+      "city": "Caracas / Petare",
+      "state": "Miranda",
+      "location": "Municipio Sucre, Petare",
+      "pastors": "Ezequiel Carrasquel y Betty de Carrasquel",
+      "ministerial_team": "Equipo Pastoral y Familiar",
+      "schedule": "Domingos 11:00 am",
+      "description": "7 años de trayectoria caminando firmes bajo el cuidado pastoral de los pastores Ezequiel y Betty de Carrasquel. Más que un templo, somos una iglesia profundamente familiar y un verdadero refugio espiritual; un oasis donde el caos se detiene y la paz de Dios toma el control para equipar y restaurar a cada miembro de la familia.",
+      "social_links": {
+        "instagram": "@restauracioncaracas",
+        "instagram_url": "https://instagram.com/restauracioncaracas",
+        "pastor_ezequiel": "@ezequielcarrasquel_"
+      },
+      "donation": {
+        "bank": "Mercantil",
+        "tax_id": "V-26150993",
+        "phone": "0424-1249299",
+        "account_holder": "Restauración Sucre"
+      },
+      "color": "#059669",
+      "badge": "Familiar & Refugio"
+    },
+    {
+      "id": "maracaibo",
+      "name": "Restauración Maracaibo",
+      "short_name": "Maracaibo",
+      "type": "Sede en Expansión Comunitaria",
+      "city": "Maracaibo",
+      "state": "Zulia",
+      "location": "Cardonal Sur e Integración Comunal (Próxima inauguración sede física)",
+      "pastors": "Daniel Osorio y Dairis de Osorio",
+      "ministerial_team": "Bajo la mentoría directa de Said y Yerutza de Carrasquel",
+      "schedule": "Grupos de Conexión semanales en comunidades",
+      "description": "El amor de Dios no tiene fronteras. Restauración Maracaibo se encuentra asentando bases firmes en comunidades como Cardonal Sur e Integración Comunal a través de Grupos de Conexión llevando luz a niños y adultos. Avanzamos con paso firme y fe expectante con miras a la inauguración de nuestra sede física.",
+      "social_links": {
+        "instagram": "@restauracionmaracaibo",
+        "instagram_url": "https://www.instagram.com/restauracionmaracaibo",
+        "pastor_daniel": "@danielosorio2019",
+        "pastora_dairis": "@mdairys"
+      },
+      "donation": {
+        "bank": "Banco de Venezuela",
+        "tax_id": "V-25957210",
+        "phone": "0426-2272658",
+        "account_holder": "Restauración Maracaibo"
+      },
+      "color": "#D97706",
+      "badge": "Grupos de Conexión"
+    }
+  ]
+}
