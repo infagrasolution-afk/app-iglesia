@@ -5,7 +5,10 @@ backend/.venv/
 *.pyc
 *.pyo
 *.pyd
-.Python
+*.db
+*.sqlite
+*.sqlite3
+backend/*.db
 backend/data/*.db
 backend/data/*.sqlite
 backend/data/*.sqlite3
