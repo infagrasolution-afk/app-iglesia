@@ -56,6 +56,9 @@ class AnnouncementCreate(BaseModel):
     content: str
     category: str = "Avisos Generales"
     is_important: bool = False
+    sede_id: Optional[str] = "TODAS"
+    sede_name: Optional[str] = "Todas las Sedes (Nacional)"
+    created_by: Optional[str] = "Pastor Principal / Admin"
 
 class AnnouncementResponse(AnnouncementCreate):
     id: int

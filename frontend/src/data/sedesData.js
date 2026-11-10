@@ -253,6 +253,61 @@ export const assignSedeAdmin = (sedeId, newAdminData) => {
   return updated;
 };
 
+// Helper to create a new Sede (used by super admins)
+export const createSedeInStorage = (newSede) => {
+  const currentList = getSedesList();
+  const sedeId = newSede.id || newSede.name.toLowerCase().replace(/restauración|restauracion/gi, '').trim().replace(/\s+/g, '-') || `sede-${Date.now()}`;
+  
+  const formattedSede = {
+    id: sedeId,
+    name: newSede.name,
+    shortName: newSede.shortName || newSede.name.replace(/Restauración |Restauracion /gi, ''),
+    city: newSede.city,
+    state: newSede.state,
+    type: newSede.type || "Sede Regional",
+    location: newSede.location || `${newSede.city}, ${newSede.state}`,
+    pastors: newSede.pastors,
+    pastorsTitle: newSede.pastorsTitle || "Pastores de Sede",
+    schedule: newSede.schedule || "Domingos 10:00 am",
+    scheduleShort: newSede.scheduleShort || "Dom 10:00 am",
+    description: newSede.description || `Sede de Restauración en ${newSede.city}.`,
+    color: newSede.color || "#83050B",
+    bgGradient: newSede.bgGradient || "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+    badge: newSede.badge || "Sede Regional",
+    sede_admin: newSede.sede_admin || {
+      name: newSede.admin_name || newSede.pastors,
+      username: newSede.admin_username || `admin_${sedeId.replace(/-/g, '')}`,
+      email: newSede.admin_email || `admin.${sedeId}@restauracionglobal.org`,
+      phone: newSede.phone || "0414-3172261",
+      role: "ADMIN_SEDE",
+      assignedBy: "Said Carrasquel / Linfante (Superadmin)",
+      status: "Activo"
+    },
+    social: newSede.social || {
+      instagram: newSede.instagram || "@restauracionglobal",
+      instagramUrl: newSede.instagramUrl || "https://www.instagram.com/restauracionglobal"
+    },
+    donation: newSede.donation || {
+      bank: newSede.bank || "Banco de Venezuela",
+      taxId: newSede.taxId || "V-18599632",
+      phone: newSede.phone || "0414-3172261",
+      accountHolder: newSede.accountHolder || "Iglesia Restauración Global"
+    }
+  };
+
+  const updated = [...currentList, formattedSede];
+  localStorage.setItem('restauracion_sedes_list', JSON.stringify(updated));
+  return { success: true, sede: formattedSede, list: updated };
+};
+
+// Helper to delete a Sede
+export const deleteSedeFromStorage = (sedeId) => {
+  const currentList = getSedesList();
+  const updated = currentList.filter(s => s.id !== sedeId);
+  localStorage.setItem('restauracion_sedes_list', JSON.stringify(updated));
+  return { success: true, list: updated };
+};
+
 export const SEDES_LIST = getSedesList();
 
 export const ALL_SEDES_OPTION = {

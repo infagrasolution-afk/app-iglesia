@@ -128,17 +128,22 @@ export const prayerAPI = {
 
 // Announcement API Endpoints
 export const announcementAPI = {
-  getAll: async () => {
+  getAll: async (sedeId = null) => {
     try {
-      return await fetchAPI('/announcements');
+      const q = (sedeId && sedeId !== 'TODAS') ? `?sede_id=${sedeId}` : '';
+      return await fetchAPI(`/announcements${q}`);
     } catch {
-      return [
+      const saved = localStorage.getItem('restauracion_announcements');
+      const list = saved ? JSON.parse(saved) : [
         {
           id: 1,
           title: "Gran Retiro de Familias 2026: 'Edificados sobre la Roca'",
           content: "Te invitamos a inscribirte en nuestro retiro anual de familias del 15 al 17 de Octubre. Habrá plenarias, talleres para niños y matrimonios.",
           category: "Eventos",
           is_important: true,
+          sede_id: "TODAS",
+          sede_name: "Todas las Sedes (Nacional)",
+          created_by: "Pastor Said Carrasquel (Super Admin)",
           created_at: new Date().toISOString()
         },
         {
@@ -147,9 +152,16 @@ export const announcementAPI = {
           content: "Este sábado de 8:00 AM a 12:00 PM nos uniremos en el templo principal para interceder por las familias y nuestra comunidad.",
           category: "Ayunos",
           is_important: false,
+          sede_id: "TODAS",
+          sede_name: "Todas las Sedes (Nacional)",
+          created_by: "Pastor Said Carrasquel (Super Admin)",
           created_at: new Date().toISOString()
         }
       ];
+      if (sedeId && sedeId !== 'TODAS') {
+        return list.filter(a => a.sede_id === sedeId || a.sede_id === 'TODAS' || !a.sede_id);
+      }
+      return list;
     }
   },
   create: async (data) => {
@@ -159,7 +171,16 @@ export const announcementAPI = {
         body: JSON.stringify(data)
       });
     } catch {
-      return { id: Date.now(), ...data, created_at: new Date().toISOString() };
+      const saved = localStorage.getItem('restauracion_announcements');
+      const list = saved ? JSON.parse(saved) : [];
+      const newAnnouncement = {
+        id: Date.now(),
+        ...data,
+        created_at: new Date().toISOString()
+      };
+      list.unshift(newAnnouncement);
+      localStorage.setItem('restauracion_announcements', JSON.stringify(list));
+      return newAnnouncement;
     }
   }
 };
@@ -484,6 +505,41 @@ export const membersAPI = {
       all.unshift(newMember);
       saveStoredMembers(all);
       return { success: true, member: newMember };
+    }
+  }
+};
+
+// Sedes API Endpoints
+export const sedesAPI = {
+  getAll: async () => {
+    try {
+      return await fetchAPI('/sedes');
+    } catch {
+      const { getSedesList } = await import('../data/sedesData');
+      return getSedesList();
+    }
+  },
+
+  create: async (sedeData) => {
+    try {
+      return await fetchAPI('/sedes', {
+        method: 'POST',
+        body: JSON.stringify(sedeData)
+      });
+    } catch {
+      const { createSedeInStorage } = await import('../data/sedesData');
+      return createSedeInStorage(sedeData);
+    }
+  },
+
+  delete: async (sedeId) => {
+    try {
+      return await fetchAPI(`/sedes/${sedeId}`, {
+        method: 'DELETE'
+      });
+    } catch {
+      const { deleteSedeFromStorage } = await import('../data/sedesData');
+      return deleteSedeFromStorage(sedeId);
     }
   }
 };

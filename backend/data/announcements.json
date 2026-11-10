@@ -5,6 +5,9 @@
     "content": "Te invitamos a inscribirte en nuestro retiro anual de familias del 15 al 17 de Octubre. Habrá plenarias, talleres para niños y matrimonios.",
     "category": "Eventos",
     "is_important": 1,
+    "sede_id": "TODAS",
+    "sede_name": "Todas las Sedes (Nacional)",
+    "created_by": "Pastor Said Carrasquel (Super Admin)",
     "created_at": "2026-08-19 20:13:32"
   },
   {
@@ -13,6 +16,9 @@
     "content": "Este sábado de 8:00 AM a 12:00 PM nos uniremos en el templo principal para interceder por las familias y nuestra comunidad.",
     "category": "Ayunos",
     "is_important": 0,
+    "sede_id": "TODAS",
+    "sede_name": "Todas las Sedes (Nacional)",
+    "created_by": "Pastor Said Carrasquel (Super Admin)",
     "created_at": "2026-08-19 20:13:32"
   },
   {
@@ -21,6 +27,9 @@
     "content": "Recuerda que este domingo aperturamos los nuevos niveles de discipulado para jóvenes y adultos a partir de las 9:00 AM.",
     "category": "Avisos Generales",
     "is_important": 0,
+    "sede_id": "TODAS",
+    "sede_name": "Todas las Sedes (Nacional)",
+    "created_by": "Pastor Said Carrasquel (Super Admin)",
     "created_at": "2026-08-19 20:13:32"
   }
 ]
