@@ -450,5 +450,44 @@ export const discipleshipAPI = {
   }
 };
 
+// Members API Endpoints
+export const membersAPI = {
+  getAll: async (sedeId = null) => {
+    try {
+      const query = sedeId && sedeId !== 'TODAS' ? `?sede_id=${sedeId}` : '';
+      return await fetchAPI(`/members${query}`);
+    } catch {
+      const { getStoredMembers } = await import('../data/membersData');
+      const all = getStoredMembers();
+      if (sedeId && sedeId !== 'TODAS') {
+        return all.filter(m => m.sede_id === sedeId);
+      }
+      return all;
+    }
+  },
+
+  create: async (memberData) => {
+    try {
+      return await fetchAPI('/members', {
+        method: 'POST',
+        body: JSON.stringify(memberData)
+      });
+    } catch {
+      const { getStoredMembers, saveStoredMembers } = await import('../data/membersData');
+      const all = getStoredMembers();
+      const newId = (all.length > 0 ? Math.max(...all.map(m => m.id)) : 0) + 1;
+      const newMember = {
+        id: newId,
+        ...memberData,
+        joined_at: new Date().toISOString().split('T')[0]
+      };
+      all.unshift(newMember);
+      saveStoredMembers(all);
+      return { success: true, member: newMember };
+    }
+  }
+};
+
+
 
 

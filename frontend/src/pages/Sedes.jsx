@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -46,6 +47,7 @@ import { getSedesList, CHURCH_INFO } from '../data/sedesData';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sedes() {
+  const navigate = useNavigate();
   const { currentSede, setCurrentSede, isAdmin, canManageAllSedes, assignSedeAdmin, user } = useAuth();
   const [sedesList, setSedesList] = useState(getSedesList());
   const [selectedState, setSelectedState] = useState('ALL');
@@ -456,6 +458,30 @@ export default function Sedes() {
                         {sede.social.instagram}
                       </Button>
                     )}
+
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<PeopleIcon sx={{ fontSize: 16 }} />}
+                      onClick={() => {
+                        setCurrentSede(sede.id);
+                        navigate('/members');
+                      }}
+                      sx={{
+                        borderRadius: '50px',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.82rem',
+                        borderColor: '#0D9488',
+                        color: '#0D9488',
+                        '&:hover': {
+                          borderColor: '#0F766E',
+                          backgroundColor: 'rgba(13, 148, 136, 0.08)'
+                        }
+                      }}
+                    >
+                      Padrón de Miembros
+                    </Button>
 
                     {canManageAllSedes && (
                       <Button

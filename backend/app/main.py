@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, prayers, announcements, sermons, donations, bible, emotions, discipleship, sedes
+from app.routers import auth, prayers, announcements, sermons, donations, bible, emotions, discipleship, sedes, members
 
 app = FastAPI(
     title="Iglesia Restauración API",
@@ -38,6 +38,7 @@ app.include_router(bible.router)
 app.include_router(emotions.router)
 app.include_router(discipleship.router)
 app.include_router(sedes.router)
+app.include_router(members.router)
 
 @app.get("/")
 def root():

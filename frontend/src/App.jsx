@@ -15,6 +15,7 @@ import Emotions from './pages/Emotions';
 import Discipleship from './pages/Discipleship';
 import Sedes from './pages/Sedes';
 import AboutUs from './pages/AboutUs';
+import Members from './pages/Members';
 
 function ProtectedAppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -28,6 +29,8 @@ function ProtectedAppRoutes() {
       <Routes>
         <Route path="/" element={<Navigate to="/prayers" replace />} />
         <Route path="/prayers" element={<PrayerWall />} />
+        <Route path="/members" element={<Members />} />
+        <Route path="/miembros" element={<Navigate to="/members" replace />} />
         <Route path="/discipleship" element={<Discipleship />} />
         <Route path="/discipulado" element={<Navigate to="/discipleship" replace />} />
         <Route path="/emotions" element={<Emotions />} />
