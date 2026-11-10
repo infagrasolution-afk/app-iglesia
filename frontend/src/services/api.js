@@ -326,3 +326,66 @@ export const bibleAPI = {
   }
 };
 
+// Emotions API Endpoints (Frasco de Versículos según Emociones - RV1960)
+import { EMOTIONS_DATA, THEME_HEADER, getRandomVerseByEmotion, getRandomVerseFromJar } from '../data/emotionsData';
+
+export const emotionAPI = {
+  getAll: async () => {
+    try {
+      return await fetchAPI('/emotions');
+    } catch {
+      return {
+        header: THEME_HEADER,
+        emotions: EMOTIONS_DATA.map((em) => ({
+          id: em.id,
+          name: em.name,
+          color: em.color,
+          bgColor: em.bgColor,
+          borderColor: em.borderColor,
+          textColor: em.textColor,
+          accentColor: em.accentColor,
+          description: em.description,
+          prayer: em.prayer,
+          verses_count: em.verses.length
+        }))
+      };
+    }
+  },
+
+  getAllWithVerses: async () => {
+    try {
+      return await fetchAPI('/emotions/all');
+    } catch {
+      return {
+        header: THEME_HEADER,
+        emotions: EMOTIONS_DATA
+      };
+    }
+  },
+
+  getEmotion: async (emotionId) => {
+    try {
+      return await fetchAPI(`/emotions/${emotionId}`);
+    } catch {
+      const found = EMOTIONS_DATA.find((e) => e.id.toLowerCase() === emotionId.toLowerCase());
+      if (!found) throw new Error(`Emoción '${emotionId}' no encontrada`);
+      return found;
+    }
+  },
+
+  getRandomVerse: async (emotionId) => {
+    try {
+      if (emotionId) {
+        return await fetchAPI(`/emotions/${emotionId}/random`);
+      }
+      return await fetchAPI('/emotions/random');
+    } catch {
+      if (emotionId) {
+        return getRandomVerseByEmotion(emotionId);
+      }
+      return getRandomVerseFromJar();
+    }
+  }
+};
+
+

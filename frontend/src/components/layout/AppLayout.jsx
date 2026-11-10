@@ -34,6 +34,7 @@ import {
   Church as ChurchIcon,
   ExpandMore as ExpandMoreIcon,
   MenuBook as BibleIcon,
+  AutoAwesome as EmotionsIcon,
   Logout as LogoutIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
@@ -41,11 +42,12 @@ import { useAuth } from '../../context/AuthContext';
 const DRAWER_WIDTH = 260;
 
 const NAV_ITEMS = [
-  { label: 'Muro de Oración', path: '/prayers', icon: <PrayerIcon /> },
-  { label: 'Santa Biblia (RVR1960)', path: '/bible', icon: <BibleIcon /> },
-  { label: 'Anuncios y Boletín', path: '/announcements', icon: <AnnouncementIcon /> },
-  { label: 'Sermones y Podcast', path: '/sermons', icon: <SermonIcon /> },
-  { label: 'Diezmos y Ofrendas', path: '/donations', icon: <DonationIcon /> }
+  { label: 'Muro de Oración', shortLabel: 'Oración', path: '/prayers', icon: <PrayerIcon /> },
+  { label: 'Frasco de Emociones', shortLabel: 'Emociones', path: '/emotions', icon: <EmotionsIcon sx={{ color: '#F472B6' }} /> },
+  { label: 'Santa Biblia (RVR1960)', shortLabel: 'Biblia', path: '/bible', icon: <BibleIcon /> },
+  { label: 'Anuncios y Boletín', shortLabel: 'Anuncios', path: '/announcements', icon: <AnnouncementIcon /> },
+  { label: 'Sermones y Podcast', shortLabel: 'Sermones', path: '/sermons', icon: <SermonIcon /> },
+  { label: 'Diezmos y Ofrendas', shortLabel: 'Diezmos', path: '/donations', icon: <DonationIcon /> }
 ];
 
 export default function AppLayout({ children }) {
@@ -336,8 +338,20 @@ export default function AppLayout({ children }) {
             {NAV_ITEMS.map((item) => (
               <BottomNavigationAction
                 key={item.path}
-                label={item.label.split(' ')[0]} // Clean short label
+                label={item.shortLabel || item.label.split(' ')[0]}
                 icon={item.icon}
+                sx={{
+                  minWidth: 0,
+                  px: 0.5,
+                  '& .MuiBottomNavigationAction-label': {
+                    fontSize: '0.68rem',
+                    fontWeight: 500,
+                    '&.Mui-selected': {
+                      fontSize: '0.72rem',
+                      fontWeight: 700
+                    }
+                  }
+                }}
               />
             ))}
           </BottomNavigation>
