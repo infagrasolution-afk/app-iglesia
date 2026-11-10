@@ -410,8 +410,9 @@ export default function Bible() {
                 }}
               >
                 {BIBLE_VERSIONS.map((ver) => (
-                  <ToggleButton key={ver.id} value={ver.id}>
-                    {ver.name}
+                  <ToggleButton key={ver.id} value={ver.id} sx={{ px: { xs: 1.2, sm: 2 } }}>
+                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{ver.name}</Box>
+                    <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>{ver.shortName}</Box>
                   </ToggleButton>
                 ))}
               </ToggleButtonGroup>
@@ -465,7 +466,7 @@ export default function Bible() {
           </Grid>
 
           {/* Chapter Selector */}
-          <Grid item xs={6} sm={3} md={3}>
+          <Grid item xs={12} sm={6} md={3}>
             <FormControl fullWidth size="small">
               <InputLabel id="chapter-select-label">Capítulo</InputLabel>
               <Select
@@ -485,8 +486,8 @@ export default function Bible() {
           </Grid>
 
           {/* Font Size Accessibility Controls */}
-          <Grid item xs={6} sm={3} md={5} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" sx={{ color: '#64748B', display: { xs: 'none', md: 'block' } }}>
+          <Grid item xs={12} sm={12} md={5} sx={{ display: 'flex', justifyContent: { xs: 'space-between', sm: 'flex-end' }, alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="caption" sx={{ color: '#64748B' }}>
               Tamaño Texto:
             </Typography>
             <ToggleButtonGroup
@@ -495,10 +496,10 @@ export default function Bible() {
               exclusive
               onChange={(e, val) => val && setFontSize(val)}
             >
-              <ToggleButton value={15}>A-</ToggleButton>
-              <ToggleButton value={18}>Normal</ToggleButton>
-              <ToggleButton value={22}>A+</ToggleButton>
-              <ToggleButton value={26}>XL</ToggleButton>
+              <ToggleButton value={15} sx={{ px: { xs: 1.2, sm: 1.8 } }}>A-</ToggleButton>
+              <ToggleButton value={18} sx={{ px: { xs: 1.2, sm: 1.8 } }}>Normal</ToggleButton>
+              <ToggleButton value={22} sx={{ px: { xs: 1.2, sm: 1.8 } }}>A+</ToggleButton>
+              <ToggleButton value={26} sx={{ px: { xs: 1.2, sm: 1.8 } }}>XL</ToggleButton>
             </ToggleButtonGroup>
           </Grid>
         </Grid>

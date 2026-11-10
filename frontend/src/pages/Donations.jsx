@@ -146,10 +146,10 @@ export default function Donations() {
         {/* Left Column: 2-Step Donation Wizard */}
         <Grid item xs={12} md={7}>
           <Paper sx={{ p: { xs: 2.5, sm: 4 } }}>
-            <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-              <Step><StepLabel>Tipo y Monto</StepLabel></Step>
-              <Step><StepLabel>Método de Pago</StepLabel></Step>
-              <Step><StepLabel>Recibo Digital</StepLabel></Step>
+            <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+              <Step><StepLabel sx={{ '& .MuiStepLabel-label': { fontSize: { xs: '0.75rem', sm: '0.88rem' } } }}>Tipo y Monto</StepLabel></Step>
+              <Step><StepLabel sx={{ '& .MuiStepLabel-label': { fontSize: { xs: '0.75rem', sm: '0.88rem' } } }}>Método de Pago</StepLabel></Step>
+              <Step><StepLabel sx={{ '& .MuiStepLabel-label': { fontSize: { xs: '0.75rem', sm: '0.88rem' } } }}>Recibo Digital</StepLabel></Step>
             </Stepper>
 
             {/* STEP 1: Select Sede, Type & Amount */}
@@ -159,7 +159,7 @@ export default function Donations() {
                 <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, fontSize: '0.98rem' }}>
                   1. Sede Destino de Restauración Global
                 </Typography>
-                <Stack direction="row" spacing={1} sx={{ mb: 2.5, flexWrap: 'wrap', gap: 1 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2.5 }}>
                   {SEDES_LIST.map((sede) => (
                     <Chip
                       key={sede.id}
@@ -172,7 +172,7 @@ export default function Donations() {
                       sx={{ fontWeight: 600, py: 1.8, borderRadius: '8px' }}
                     />
                   ))}
-                </Stack>
+                </Box>
 
                 <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 600, fontSize: '0.98rem' }}>
                   2. Selecciona el Tipo de Aporte

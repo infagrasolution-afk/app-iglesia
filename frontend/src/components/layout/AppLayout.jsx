@@ -227,18 +227,33 @@ export default function AppLayout({ children }) {
                 border: '1px solid rgba(255, 255, 255, 0.3)'
               }}
             />
-            <Typography variant="h6" component="div" sx={{ fontWeight: 700, fontSize: { xs: '0.96rem', sm: '1.15rem' }, letterSpacing: '-0.01em' }}>
-              {NAV_ITEMS.find((n) => n.path === location.pathname)?.label || CHURCH_INFO.shortName}
+            <Typography
+              variant="h6"
+              component="div"
+              noWrap
+              sx={{
+                fontWeight: 700,
+                fontSize: { xs: '0.9rem', sm: '1.15rem' },
+                letterSpacing: '-0.01em',
+                maxWidth: { xs: '130px', sm: '240px', md: 'none' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              {isMobile
+                ? (NAV_ITEMS.find((n) => n.path === location.pathname)?.shortLabel || CHURCH_INFO.shortName)
+                : (NAV_ITEMS.find((n) => n.path === location.pathname)?.label || CHURCH_INFO.shortName)}
             </Typography>
           </Box>
 
           {/* Right Controls: Sede Switcher + Role Selector */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.6, sm: 1 } }}>
             {/* SEDE INDICATOR / SWITCHER */}
             <Tooltip title={isAdmin ? "Cambiar sede o ver todas las sedes (Control Global)" : "Tu sede de Restauración Global"}>
               <Chip
-                icon={currentSede === 'TODAS' ? <GlobalIcon sx={{ color: '#FCD34D !important', fontSize: '1rem' }} /> : <LocationIcon sx={{ color: '#F87171 !important', fontSize: '1rem' }} />}
-                label={isMobile ? activeSedeDetails?.shortName || 'Sede' : `Sede: ${activeSedeDetails?.shortName || 'Global'}${isAdmin ? ' ▾' : ''}`}
+                size={isMobile ? "small" : "medium"}
+                icon={currentSede === 'TODAS' ? <GlobalIcon sx={{ color: '#FCD34D !important', fontSize: '0.9rem' }} /> : <LocationIcon sx={{ color: '#F87171 !important', fontSize: '0.9rem' }} />}
+                label={isMobile ? (activeSedeDetails?.badge || activeSedeDetails?.shortName || 'Sede') : `Sede: ${activeSedeDetails?.shortName || 'Global'}${isAdmin ? ' ▾' : ''}`}
                 onClick={handleSedeMenuOpen}
                 variant="outlined"
                 sx={{
@@ -247,7 +262,8 @@ export default function AppLayout({ children }) {
                   backgroundColor: isAdmin ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
                   cursor: 'pointer',
                   fontWeight: 600,
-                  fontSize: '0.78rem',
+                  fontSize: { xs: '0.72rem', sm: '0.78rem' },
+                  height: { xs: 26, sm: 32 },
                   '&:hover': {
                     borderColor: '#FFFFFF',
                     backgroundColor: 'rgba(255, 255, 255, 0.12)'
@@ -423,14 +439,15 @@ export default function AppLayout({ children }) {
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2, sm: 3 },
+          p: { xs: 1.5, sm: 2.5, md: 3 },
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           mt: { xs: '56px', sm: '64px' },
-          mb: { xs: '60px', md: 0 },
-          minHeight: 'calc(100vh - 64px)'
+          mb: { xs: '68px', md: 0 },
+          minHeight: 'calc(100vh - 64px)',
+          overflowX: 'hidden'
         }}
       >
-        <Container maxWidth="xl" disableGutters>
+        <Container maxWidth="xl" disableGutters sx={{ overflowX: 'hidden' }}>
           {children}
         </Container>
       </Box>

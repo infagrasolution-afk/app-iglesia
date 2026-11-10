@@ -452,6 +452,7 @@ export default function Sedes() {
                           fontSize: '0.82rem',
                           borderColor: '#E2E8F0',
                           color: '#475569',
+                          width: { xs: '100%', sm: 'auto' },
                           '&:hover': { borderColor: '#E1306C', color: '#E1306C' }
                         }}
                       >
@@ -474,6 +475,7 @@ export default function Sedes() {
                         fontSize: '0.82rem',
                         borderColor: '#0D9488',
                         color: '#0D9488',
+                        width: { xs: '100%', sm: 'auto' },
                         '&:hover': {
                           borderColor: '#0F766E',
                           backgroundColor: 'rgba(13, 148, 136, 0.08)'
@@ -493,7 +495,8 @@ export default function Sedes() {
                           textTransform: 'none',
                           fontWeight: 600,
                           fontSize: '0.82rem',
-                          ml: 'auto',
+                          ml: { xs: 0, sm: 'auto' },
+                          width: { xs: '100%', sm: 'auto' },
                           backgroundColor: isUserSede ? '#0F172A' : 'transparent',
                           borderColor: '#0F172A',
                           color: isUserSede ? '#FFFFFF' : '#0F172A'
@@ -516,7 +519,7 @@ export default function Sedes() {
         onClose={() => setAssignDialogOpen(false)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { borderRadius: '20px', p: 1 } }}
+        PaperProps={{ sx: { borderRadius: '20px', m: { xs: 1, sm: 2 }, p: { xs: 0.5, sm: 1 }, maxHeight: '92vh' } }}
       >
         <DialogTitle sx={{ fontWeight: 800, fontSize: '1.25rem', color: '#0F172A', display: 'flex', alignItems: 'center', gap: 1 }}>
           <AdminIcon sx={{ color: '#F59E0B' }} />

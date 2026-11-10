@@ -951,6 +951,8 @@ export default function Emotions() {
         PaperProps={{
           sx: {
             borderRadius: '20px',
+            m: { xs: 1, sm: 2 },
+            maxHeight: '92vh',
             overflow: 'hidden',
             border: activeVerse ? `2px solid ${activeVerse.borderColor}` : '1px solid #E2E8F0',
             boxShadow: activeVerse ? `0 20px 40px -10px ${activeVerse.color}40` : '0 20px 40px rgba(0,0,0,0.2)'

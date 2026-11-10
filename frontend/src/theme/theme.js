@@ -102,10 +102,17 @@ const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
+        html: {
+          overflowX: 'hidden',
+          WebkitTextSizeAdjust: '100%',
+        },
         body: {
           backgroundColor: '#F8FAFC',
           color: '#0F172A',
           scrollbarWidth: 'thin',
+          overflowX: 'hidden',
+          width: '100%',
+          WebkitTapHighlightColor: 'transparent',
         },
       },
     },
@@ -174,6 +181,8 @@ const theme = createTheme({
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
           boxShadow: '0px 8px 30px rgba(15, 23, 42, 0.12)',
+          margin: '12px',
+          maxHeight: 'calc(100% - 24px)',
         },
       },
     },

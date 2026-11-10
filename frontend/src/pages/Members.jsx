@@ -285,6 +285,7 @@ export default function Members() {
                   fontWeight: 700,
                   px: 3,
                   py: 1.3,
+                  width: { xs: '100%', sm: 'auto' },
                   borderRadius: 2.5,
                   boxShadow: '0 8px 20px rgba(217, 119, 6, 0.35)',
                   '&:hover': {
@@ -303,53 +304,53 @@ export default function Members() {
       {/* Metrics Row */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}>
-          <Paper sx={{ p: 2, borderRadius: 2.5, border: '1px solid #E2E8F0', textAlign: 'center' }}>
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
+          <Paper sx={{ p: { xs: 1.2, sm: 2 }, borderRadius: 2.5, border: '1px solid #E2E8F0', textAlign: 'center' }}>
+            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
               Total Miembros
             </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A', mt: 0.5 }}>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A', mt: 0.5, fontSize: { xs: '1.4rem', sm: '2rem' } }}>
               {stats.total}
             </Typography>
-            <Typography variant="caption" sx={{ color: '#059669', fontWeight: 600 }}>
+            <Typography variant="caption" sx={{ color: '#059669', fontWeight: 600, fontSize: { xs: '0.68rem', sm: '0.75rem' } }}>
               Registrados
             </Typography>
           </Paper>
         </Grid>
         <Grid item xs={6} sm={3}>
-          <Paper sx={{ p: 2, borderRadius: 2.5, border: '1px solid #E2E8F0', textAlign: 'center' }}>
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
+          <Paper sx={{ p: { xs: 1.2, sm: 2 }, borderRadius: 2.5, border: '1px solid #E2E8F0', textAlign: 'center' }}>
+            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
               Bautizados
             </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 800, color: '#059669', mt: 0.5 }}>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: '#059669', mt: 0.5, fontSize: { xs: '1.4rem', sm: '2rem' } }}>
               {stats.bautizados}
             </Typography>
-            <Typography variant="caption" sx={{ color: '#64748B' }}>
+            <Typography variant="caption" sx={{ color: '#64748B', fontSize: { xs: '0.68rem', sm: '0.75rem' } }}>
               En comunión
             </Typography>
           </Paper>
         </Grid>
         <Grid item xs={6} sm={3}>
-          <Paper sx={{ p: 2, borderRadius: 2.5, border: '1px solid #E2E8F0', textAlign: 'center' }}>
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
+          <Paper sx={{ p: { xs: 1.2, sm: 2 }, borderRadius: 2.5, border: '1px solid #E2E8F0', textAlign: 'center' }}>
+            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
               Por Bautizar
             </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 800, color: '#D97706', mt: 0.5 }}>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: '#D97706', mt: 0.5, fontSize: { xs: '1.4rem', sm: '2rem' } }}>
               {stats.porBautizar}
             </Typography>
-            <Typography variant="caption" sx={{ color: '#D97706', fontWeight: 600 }}>
+            <Typography variant="caption" sx={{ color: '#D97706', fontWeight: 600, fontSize: { xs: '0.68rem', sm: '0.75rem' } }}>
               En discipulado
             </Typography>
           </Paper>
         </Grid>
         <Grid item xs={6} sm={3}>
-          <Paper sx={{ p: 2, borderRadius: 2.5, border: '1px solid #E2E8F0', textAlign: 'center' }}>
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
-              Servidores & Líderes
+          <Paper sx={{ p: { xs: 1.2, sm: 2 }, borderRadius: 2.5, border: '1px solid #E2E8F0', textAlign: 'center' }}>
+            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
+              Servidores
             </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 800, color: '#2563EB', mt: 0.5 }}>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: '#2563EB', mt: 0.5, fontSize: { xs: '1.4rem', sm: '2rem' } }}>
               {stats.servidores}
             </Typography>
-            <Typography variant="caption" sx={{ color: '#64748B' }}>
+            <Typography variant="caption" sx={{ color: '#64748B', fontSize: { xs: '0.68rem', sm: '0.75rem' } }}>
               En ministerios
             </Typography>
           </Paper>
@@ -633,7 +634,7 @@ export default function Members() {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 3, p: 1 }
+          sx: { borderRadius: { xs: 2, sm: 3 }, m: { xs: 1, sm: 2 }, p: { xs: 0.5, sm: 1 }, maxHeight: '92vh' }
         }}
       >
         <form onSubmit={handleSubmitMember}>

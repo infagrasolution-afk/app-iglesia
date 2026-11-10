@@ -393,6 +393,7 @@ export default function PrayerWall() {
         onClose={() => setOpenModal(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{ sx: { borderRadius: '16px', m: { xs: 1, sm: 2 }, p: { xs: 0.5, sm: 1 }, maxHeight: '92vh' } }}
       >
         <DialogTitle sx={{ fontWeight: 700, pb: 1, pt: 3 }}>
           Publicar Petición de Oración

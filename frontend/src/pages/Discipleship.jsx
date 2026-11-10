@@ -1163,18 +1163,18 @@ export default function Discipleship() {
         }}
         maxWidth="md"
         fullWidth
-        PaperProps={{ sx: { borderRadius: '18px' } }}
+        PaperProps={{ sx: { borderRadius: { xs: '14px', sm: '18px' }, m: { xs: 1, sm: 2 }, maxHeight: '92vh' } }}
       >
         {activeLesson && (
           <Box>
-            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-              <Box>
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, gap: 1 }}>
+              <Box sx={{ maxWidth: { xs: '80%', sm: '90%' } }}>
                 <Chip
                   label={activeLesson.scripture}
                   size="small"
                   sx={{ backgroundColor: '#EFF6FF', color: '#1E40AF', fontWeight: 700, mb: 0.5 }}
                 />
-                <Typography variant="h5" sx={{ fontWeight: 800, color: '#0F172A' }}>
+                <Typography variant="h5" sx={{ fontWeight: 800, color: '#0F172A', fontSize: { xs: '1.15rem', sm: '1.45rem' } }}>
                   {activeLesson.title}
                 </Typography>
               </Box>
@@ -1309,16 +1309,16 @@ export default function Discipleship() {
         onClose={() => setEvalModalOpen(false)}
         maxWidth="md"
         fullWidth
-        PaperProps={{ sx: { borderRadius: '18px' } }}
+        PaperProps={{ sx: { borderRadius: { xs: '14px', sm: '18px' }, m: { xs: 1, sm: 2 }, maxHeight: '92vh' } }}
       >
         {selectedSubmission && (
           <Box>
-            <DialogTitle sx={{ fontWeight: 800, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
+            <DialogTitle sx={{ fontWeight: 800, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+              <Box sx={{ maxWidth: { xs: '80%', sm: '90%' } }}>
                 <Typography variant="caption" sx={{ color: '#2563EB', fontWeight: 800 }}>
                   PANEL DEL DISCIPULADOR
                 </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                <Typography variant="h5" sx={{ fontWeight: 800, fontSize: { xs: '1.15rem', sm: '1.45rem' } }}>
                   Evaluar Entrega: {selectedSubmission.disciple_name}
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#64748B' }}>
