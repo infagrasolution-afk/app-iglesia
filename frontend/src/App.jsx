@@ -12,6 +12,7 @@ import Announcements from './pages/Announcements';
 import Sermons from './pages/Sermons';
 import Donations from './pages/Donations';
 import Emotions from './pages/Emotions';
+import Discipleship from './pages/Discipleship';
 
 function ProtectedAppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -25,6 +26,8 @@ function ProtectedAppRoutes() {
       <Routes>
         <Route path="/" element={<Navigate to="/prayers" replace />} />
         <Route path="/prayers" element={<PrayerWall />} />
+        <Route path="/discipleship" element={<Discipleship />} />
+        <Route path="/discipulado" element={<Navigate to="/discipleship" replace />} />
         <Route path="/emotions" element={<Emotions />} />
         <Route path="/frasco" element={<Navigate to="/emotions" replace />} />
         <Route path="/bible" element={<Bible />} />

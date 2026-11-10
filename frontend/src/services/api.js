@@ -1,5 +1,6 @@
 import { BIBLE_BOOKS, BIBLE_VERSIONS, getVersesForChapter } from '../data/bibleData';
 import { EMOTIONS_DATA, THEME_HEADER, getRandomVerseByEmotion, getRandomVerseFromJar } from '../data/emotionsData';
+import { INITIAL_DISCIPLESHIP_DATA } from '../data/discipleshipData';
 
 const API_BASE_URL = '/api';
 
@@ -382,5 +383,72 @@ export const emotionAPI = {
     }
   }
 };
+
+// Discipleship API Endpoints (Discipulado Bíblico Interactivo)
+export const discipleshipAPI = {
+  getAll: async () => {
+    try {
+      return await fetchAPI('/discipleship');
+    } catch {
+      // Local fallback with localStorage persistence
+      try {
+        const saved = localStorage.getItem('iglesia_discipleship_data');
+        return saved ? JSON.parse(saved) : INITIAL_DISCIPLESHIP_DATA;
+      } catch {
+        return INITIAL_DISCIPLESHIP_DATA;
+      }
+    }
+  },
+
+  createLesson: async (lessonData) => {
+    try {
+      return await fetchAPI('/discipleship/lessons', {
+        method: 'POST',
+        body: JSON.stringify(lessonData)
+      });
+    } catch {
+      return {
+        id: `les-${lessonData.module_id}-${Date.now()}`,
+        ...lessonData
+      };
+    }
+  },
+
+  submitActivity: async (submissionData) => {
+    try {
+      return await fetchAPI('/discipleship/submissions', {
+        method: 'POST',
+        body: JSON.stringify(submissionData)
+      });
+    } catch {
+      return {
+        id: `sub-${Date.now()}`,
+        ...submissionData,
+        submitted_at: new Date().toISOString(),
+        status: 'PENDIENTE',
+        evaluation: null
+      };
+    }
+  },
+
+  evaluateSubmission: async (submissionId, evalData) => {
+    try {
+      return await fetchAPI(`/discipleship/submissions/${submissionId}/evaluate`, {
+        method: 'POST',
+        body: JSON.stringify(evalData)
+      });
+    } catch {
+      return {
+        id: submissionId,
+        status: evalData.status || 'APROBADO',
+        evaluation: {
+          ...evalData,
+          evaluated_at: new Date().toISOString()
+        }
+      };
+    }
+  }
+};
+
 
 

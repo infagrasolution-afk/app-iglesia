@@ -35,6 +35,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   MenuBook as BibleIcon,
   AutoAwesome as EmotionsIcon,
+  School as DiscipleshipIcon,
   Logout as LogoutIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
@@ -43,6 +44,7 @@ const DRAWER_WIDTH = 260;
 
 const NAV_ITEMS = [
   { label: 'Muro de Oración', shortLabel: 'Oración', path: '/prayers', icon: <PrayerIcon /> },
+  { label: 'Discipulado Bíblico', shortLabel: 'Discipulado', path: '/discipleship', icon: <DiscipleshipIcon sx={{ color: '#2563EB' }} /> },
   { label: 'Frasco de Emociones', shortLabel: 'Emociones', path: '/emotions', icon: <EmotionsIcon sx={{ color: '#F472B6' }} /> },
   { label: 'Santa Biblia (3 Versiones)', shortLabel: 'Biblia', path: '/bible', icon: <BibleIcon /> },
   { label: 'Anuncios y Boletín', shortLabel: 'Anuncios', path: '/announcements', icon: <AnnouncementIcon /> },

@@ -1,0 +1,197 @@
+// Datos iniciales de discipulado para la aplicación
+// Soporta tanto modo sin conexión (PWA/localStorage) como sincronización con la API REST
+
+export const INITIAL_DISCIPLESHIP_DATA = {
+  program_info: {
+    name: "Programa de Discipulado Bíblico: «Creciendo en Cristo»",
+    description: "Ruta formativa interactiva para afirmar la fe, profundizar en la Palabra y formar discípulos multiplicadores de Jesucristo.",
+    key_verse: "Por tanto, id, y haced discípulos a todas las naciones... enseñándoles que guarden todas las cosas que os he mandado. (Mateo 28:19-20)"
+  },
+  modules: [
+    {
+      id: "mod-1",
+      title: "Módulo 1: Fundamentos de la Nueva Vida en Cristo",
+      level: "Nivel 1: Cimientos de la Fe",
+      color: "#2563EB",
+      bgColor: "#EFF6FF",
+      lessons: [
+        {
+          id: "les-1-1",
+          module_id: "mod-1",
+          order: 1,
+          title: "Lección 1: La Seguridad de la Salvación por Gracia",
+          scripture: "Efesios 2:8-9 • Romanos 10:9-10 • 1 Juan 5:11-13",
+          duration: "25 min de lectura y reflexión",
+          objective: "Comprender la certeza del perdón y la vida eterna como regalo inmerecido de Dios mediante la fe en Jesucristo.",
+          content: "La salvación no es el resultado del esfuerzo humano, de sacrificios personales ni de rituales religiosos. La Biblia enseña enfáticamente en Efesios 2:8-9 que 'por gracia sois salvos por medio de la fe; y esto no de vosotros, pues es don de Dios; no por obras, para que nadie se gloríe'. Al recibir a Cristo, pasamos de muerte a vida espiritual y nos convertimos en hijos legítimos de Dios (Juan 1:12). Nuestra seguridad descansa en la fidelidad eterna de Cristo, no en nuestras emociones cambiantes.",
+          questions: [
+            "¿Qué significa que la salvación es un 'don de Dios' y no por obras humanas según Efesios 2:8-9?",
+            "Explica en tus propias palabras qué cambio ha traído Jesús a tu corazón desde que le recibiste.",
+            "Según 1 Juan 5:11-13, ¿en quién se encuentra la vida eterna y qué certeza tenemos como creyentes?"
+          ],
+          practical_task: "Anota tu testimonio de conversión en 3 oraciones y compártelo con una persona cercana o familiar esta semana."
+        },
+        {
+          id: "les-1-2",
+          module_id: "mod-1",
+          order: 2,
+          title: "Lección 2: La Oración Diaria y Comunión con el Padre",
+          scripture: "Mateo 6:9-13 • Filipenses 4:6-7 • 1 Tesalonicenses 5:17",
+          duration: "30 min de lectura y práctica",
+          objective: "Desarrollar un altar personal de oración diaria y conversación íntima y sincera con Dios.",
+          content: "Orar es simplemente hablar con Dios como con un Padre amoroso. Jesús nos dejó el modelo del 'Padre Nuestro' enseñándonos a alabar su santo nombre, buscar su reino y su voluntad, pedir el sustento cotidiano, perdonar para ser perdonados y pedir liberación del mal. La oración no es un monólogo ni una repetición vacía, sino una relación viva donde aprendemos a descansar en la soberanía de Dios.",
+          questions: [
+            "¿Cuáles son los 4 elementos principales del modelo de oración que Jesús enseñó en Mateo 6?",
+            "¿Qué obstáculo o distracción sueles enfrentar al buscar un tiempo a solas con Dios y cómo lo vencerás?",
+            "¿Cómo ayuda la oración a transformar la ansiedad en paz sobrenatural según Filipenses 4:6-7?"
+          ],
+          practical_task: "Separa 15 minutos continuos cada mañana de esta semana para orar y llevar un cuaderno de peticiones y respuestas de Dios."
+        }
+      ]
+    },
+    {
+      id: "mod-2",
+      title: "Módulo 2: La Palabra de Dios como Guía Diaria",
+      level: "Nivel 2: Crecimiento Espiritual",
+      color: "#0D9488",
+      bgColor: "#F0FDFA",
+      lessons: [
+        {
+          id: "les-2-1",
+          module_id: "mod-2",
+          order: 1,
+          title: "Lección 3: Cómo Meditar y Estudiar la Santa Biblia",
+          scripture: "Salmos 119:105 • 2 Timoteo 3:16-17 • Josué 1:8",
+          duration: "30 min de estudio",
+          objective: "Aprender métodos prácticos de lectura bíblica devocional: Observar, Interpretar y Aplicar.",
+          content: "La Biblia es la Palabra inspirada de Dios, inerrante y suficiente para todas las áreas de nuestra vida. Como enseña Josué 1:8, meditar de día y de noche en la ley de Dios hace prosperar nuestro camino y nos da sabiduría. El método devocional básico consiste en 3 pasos: 1) ¿Qué dice el texto? (Observación), 2) ¿Qué significó para sus primeros lectores? (Interpretación), y 3) ¿Cómo lo pongo en práctica en mi vida hoy? (Aplicación concreta).",
+          questions: [
+            "¿Por qué es vital que la Biblia sea la autoridad final de fe y conducta en la vida del creyente?",
+            "Elige un versículo leído hoy y escribe cómo lo aplicarás de manera concreta en tu rutina diaria.",
+            "¿Qué diferencia existe entre leer la Biblia como información histórica y meditarla para transformación del corazón?"
+          ],
+          practical_task: "Lee un capítulo de los Evangelios cada día de esta semana y subraya una promesa y un mandamiento a cumplir."
+        },
+        {
+          id: "les-2-2",
+          module_id: "mod-2",
+          order: 2,
+          title: "Lección 4: La Vida en Comunidad y la Iglesia Local",
+          scripture: "Hebreos 10:24-25 • Hechos 2:42-47 • 1 Corintios 12:12-27",
+          duration: "25 min de lectura y comunión",
+          objective: "Comprender el rol vital del cuerpo de Cristo, los dones espirituales y la congregación.",
+          content: "Ningún cristiano fue diseñado para vivir la fe en aislamiento. La Biblia compara a la iglesia con un cuerpo donde cada miembro tiene una función irremplazable (1 Corintios 12). Congregarse, orar juntos, participar de la Santa Cena y servir con nuestros talentos son mandamientos que fortalecen nuestra salud espiritual y nos guardan de las trampas del enemigo.",
+          questions: [
+            "¿Por qué Hebreos 10:25 nos exhorta a no dejar de congregarnos como algunos tienen por costumbre?",
+            "Identifica al menos un don o talento que Dios te ha dado y cómo puedes ponerlo al servicio de la iglesia.",
+            "¿De qué manera la comunión fraternal te ha ayudado en momentos de debilidad o prueba?"
+          ],
+          practical_task: "Ponte en contacto con un hermano o líder esta semana para orar juntos y ofrecer apoyo mutuo."
+        }
+      ]
+    },
+    {
+      id: "mod-3",
+      title: "Módulo 3: Mayordomía y la Gran Comisión",
+      level: "Nivel 3: Madurez y Multiplicación",
+      color: "#D97706",
+      bgColor: "#FFFBEB",
+      lessons: [
+        {
+          id: "les-3-1",
+          module_id: "mod-3",
+          order: 1,
+          title: "Lección 5: Mayordomía de Vida: Tiempo, Talentos y Recursos",
+          scripture: "Malaquías 3:10 • 2 Corintios 9:6-8 • Mateo 6:19-21",
+          duration: "30 min",
+          objective: "Aprender a honrar a Dios con nuestro tiempo, dones y finanzas de manera gozosa.",
+          content: "La mayordomía bíblica reconoce que Dios es el dueño absoluto de todo lo que existe, y nosotros somos administradores de su gracia. Cuando honramos a Dios con nuestros diezmos y ofrendas voluntarias con corazón alegre, vencemos el amor al dinero y permitimos que la obra misionera y el templo sigan bendiciendo a miles.",
+          questions: [
+            "¿Cuál es la diferencia entre ser 'dueño' y ser 'mayordomo' de nuestras bendiciones?",
+            "¿Qué promete Dios en Malaquías 3:10 y 2 Corintios 9:7-8 a los que ofrendan con generosidad y alegría?",
+            "¿Cómo administras tu tiempo semanal para asegurar que Dios tenga el primer lugar en tu agenda?"
+          ],
+          practical_task: "Haz una lista de agradecimiento a Dios por cada provisión recibida este mes y ora por tu fidelidad financiera."
+        },
+        {
+          id: "les-3-2",
+          module_id: "mod-3",
+          order: 2,
+          title: "Lección 6: El Mandato Supremo: Hacer Nuevos Discípulos",
+          scripture: "Mateo 28:18-20 • 2 Timoteo 2:2 • Hechos 1:8",
+          duration: "35 min",
+          objective: "Aprender a discipular a otros y convertirse en un mentor espiritual multiplicador.",
+          content: "El discipulado no termina cuando aprendemos; se completa cuando enseñamos a otros. El apóstol Pablo le dijo a Timoteo: 'Lo que has oído de mí ante muchos testigos, esto encarga a hombres fieles que sean idóneos para enseñar también a otros' (2 Timoteo 2:2). Jesús nos prometió el poder del Espíritu Santo para ser sus testigos hasta lo último de la tierra.",
+          questions: [
+            "¿En qué consiste la Gran Comisión dada por Jesús en Mateo 28:18-20?",
+            "¿Qué características debe tener un creyente según 2 Timoteo 2:2 para poder discipular a otros?",
+            "Nombra a una persona por la cual estás orando para compartirle el evangelio y comenzar a discipularla."
+          ],
+          practical_task: "Identifica a un creyente nuevo o amigo y proponle acompañarle en una reunión o lectura bíblica semanal."
+        }
+      ]
+    }
+  ],
+  disciples: [
+    {
+      id: 3,
+      user_id: 3,
+      name: "Carlos Martínez",
+      email: "miembro@iglesia.org",
+      mentor_name: "Pastor Principal (Admin)",
+      mentor_id: 1,
+      joined_date: "2026-09-01",
+      completed_lessons: ["les-1-1"],
+      current_lesson_id: "les-1-2",
+      status: "ACTIVO",
+      spiritual_level: "Discípulo en Crecimiento (Nivel 1)"
+    },
+    {
+      id: 4,
+      user_id: 4,
+      name: "Ana Gómez",
+      email: "ana.gomez@iglesia.org",
+      mentor_name: "Líder de Jóvenes (Líder)",
+      mentor_id: 2,
+      joined_date: "2026-09-15",
+      completed_lessons: ["les-1-1", "les-1-2"],
+      current_lesson_id: "les-2-1",
+      status: "ACTIVO",
+      spiritual_level: "Discípulo Firme (Nivel 2)"
+    }
+  ],
+  submissions: [
+    {
+      id: "sub-101",
+      disciple_id: 3,
+      disciple_name: "Carlos Martínez",
+      lesson_id: "les-1-1",
+      lesson_title: "Lección 1: La Seguridad de la Salvación por Gracia",
+      submitted_at: "2026-11-08T16:20:00Z",
+      answers: [
+        {
+          question: "¿Qué significa que la salvación es un 'don de Dios' y no por obras humanas según Efesios 2:8-9?",
+          answer: "Significa que no podemos comprarla ni ganarla por nuestros méritos o buenas obras. Es un regalo gratuito e inmerecido de Dios que recibimos mediante la fe en Jesús."
+        },
+        {
+          "question": "Explica en tus propias palabras qué cambio ha traído Jesús a tu corazón desde que le recibiste.",
+          "answer": "Jesús trajo paz y propósito a mi hogar. Antes me sentía vacío y angustiado por el futuro, pero ahora sé que mi vida está segura en sus manos."
+        },
+        {
+          "question": "Según 1 Juan 5:11-13, ¿en quién se encuentra la vida eterna y qué certeza tenemos como creyentes?",
+          "answer": "La vida eterna está en el Hijo de Dios. El que tiene al Hijo tiene la vida, y podemos tener la plena certeza de que somos salvos hoy."
+        }
+      ],
+      practical_task_done: true,
+      practical_task_notes: "Compartí mi testimonio con mi compañero de trabajo Juan el viernes durante el almuerzo.",
+      status: "APROBADO",
+      evaluation: {
+        status: "APROBADO",
+        score: "Excelente (100%)",
+        evaluated_by: "Pastor Principal (Admin)",
+        evaluated_at: "2026-11-09T09:30:00Z",
+        mentor_feedback: "¡Bendiciones amado hermano Carlos! Tu respuesta refleja una comprensión muy clara y bíblica de la gracia. Me alegra mucho que hayas compartido tu testimonio con tu compañero. ¡Sigue adelante con la Lección 2!"
+      }
+    }
+  ]
+};
