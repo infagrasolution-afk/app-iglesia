@@ -1,3 +1,6 @@
+import { BIBLE_BOOKS, BIBLE_VERSIONS, getVersesForChapter } from '../data/bibleData';
+import { EMOTIONS_DATA, THEME_HEADER, getRandomVerseByEmotion, getRandomVerseFromJar } from '../data/emotionsData';
+
 const API_BASE_URL = '/api';
 
 async function fetchAPI(endpoint, options = {}) {
@@ -220,43 +223,37 @@ export const donationAPI = {
   }
 };
 
-// Bible API Endpoints (Reina-Valera 1960)
+// Bible API Endpoints (Reina-Valera 1960, NVI, NTV)
 export const bibleAPI = {
   getBooks: async () => {
     try {
-      return await fetchAPI('/bible/books');
+      const data = await fetchAPI('/bible/books');
+      return data && data.length >= 66 ? data : BIBLE_BOOKS;
     } catch {
-      return [
-        { id: 1, name: "Génesis", testament: "OT", chapters: 50, category: "Pentateuco" },
-        { id: 19, name: "Salmos", testament: "OT", chapters: 150, category: "Poéticos" },
-        { id: 20, name: "Proverbios", testament: "OT", chapters: 31, category: "Poéticos" },
-        { id: 40, name: "Mateo", testament: "NT", chapters: 28, category: "Evangelios" },
-        { id: 43, name: "Juan", testament: "NT", chapters: 21, category: "Evangelios" },
-        { id: 45, name: "Romanos", testament: "NT", chapters: 16, category: "Epístolas Paulinas" },
-        { id: 50, name: "Filipenses", testament: "NT", chapters: 4, category: "Epístolas Paulinas" },
-        { id: 66, name: "Apocalipsis", testament: "NT", chapters: 22, category: "Profético" }
-      ];
+      return BIBLE_BOOKS;
     }
   },
 
-  getChapter: async (bookId, chapter) => {
+  getVersions: () => BIBLE_VERSIONS,
+
+  getChapter: async (bookId, chapter, version = 'RVR1960') => {
     try {
-      return await fetchAPI(`/bible/chapter/${bookId}/${chapter}`);
+      return await fetchAPI(`/bible/chapter/${bookId}/${chapter}?version=${version}`);
     } catch {
+      const book = BIBLE_BOOKS.find((b) => b.id === Number(bookId)) || { name: 'Salmos', chapters: 150 };
+      const versionName = version === 'NVI' ? 'Nueva Versión Internacional (NVI)' :
+                          version === 'NTV' ? 'Nueva Traducción Viviente (NTV)' :
+                          'Reina-Valera 1960 (RVR1960)';
       return {
-        book: "Salmos",
+        book: book.name,
         book_id: bookId,
         chapter: chapter,
-        total_chapters: 150,
-        version: "Reina-Valera 1960 (RVR1960)",
-        verses: [
-          { verse: 1, text: "Jehová es mi pastor; nada me faltará." },
-          { verse: 2, text: "En lugares de delicados pastos me hará descansar; junto a aguas de reposo me pastoreará." },
-          { verse: 3, text: "Confortará mi alma; me guiará por sendas de justicia por amor de su nombre." },
-          { verse: 4, text: "Aunque ande en valle de sombra de muerte, no temeré mal alguno, porque tú estarás conmigo; tu vara y tu cayado me infundirán aliento." },
-          { verse: 5, text: "Aderezas mesa delante de mí en presencia de mis angustiadores; unges mi cabeza con aceite; mi copa está rebosando." },
-          { verse: 6, text: "Ciertamente el bien y la misericordia me seguirán todos los días de mi vida, y en la casa de Jehová moraré por largos días." }
-        ]
+        total_chapters: book.chapters,
+        version: versionName,
+        version_code: version,
+        description: book.description,
+        category: book.category,
+        verses: getVersesForChapter(bookId, chapter, version)
       };
     }
   },
@@ -327,8 +324,6 @@ export const bibleAPI = {
 };
 
 // Emotions API Endpoints (Frasco de Versículos según Emociones - RV1960)
-import { EMOTIONS_DATA, THEME_HEADER, getRandomVerseByEmotion, getRandomVerseFromJar } from '../data/emotionsData';
-
 export const emotionAPI = {
   getAll: async () => {
     try {
