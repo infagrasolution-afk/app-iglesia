@@ -15,7 +15,16 @@ import {
   Paper,
   Stack,
   Tab,
-  Tabs
+  Tabs,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel
 } from '@mui/material';
 import {
   LocationOn as LocationIcon,
@@ -28,16 +37,29 @@ import {
   YouTube as YouTubeIcon,
   CheckCircle as CheckIcon,
   Star as StarIcon,
-  Launch as LaunchIcon
+  Launch as LaunchIcon,
+  AdminPanelSettings as AdminIcon,
+  Edit as EditIcon,
+  ManageAccounts as AssignIcon
 } from '@mui/icons-material';
-import { SEDES_LIST, CHURCH_INFO } from '../data/sedesData';
+import { getSedesList, CHURCH_INFO } from '../data/sedesData';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sedes() {
-  const { currentSede, setCurrentSede, isAdmin } = useAuth();
+  const { currentSede, setCurrentSede, isAdmin, canManageAllSedes, assignSedeAdmin, user } = useAuth();
+  const [sedesList, setSedesList] = useState(getSedesList());
   const [selectedState, setSelectedState] = useState('ALL');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState('');
+
+  // Admin Assignment Dialog State
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [targetSedeForEdit, setTargetSedeForEdit] = useState(null);
+  const [editAdminName, setEditAdminName] = useState('');
+  const [editAdminEmail, setEditAdminEmail] = useState('');
+  const [editAdminUsername, setEditAdminUsername] = useState('');
+  const [editAdminPhone, setEditAdminPhone] = useState('');
+  const [editAdminNotes, setEditAdminNotes] = useState('');
 
   const handleCopy = (text, label) => {
     navigator.clipboard.writeText(text);
@@ -45,7 +67,36 @@ export default function Sedes() {
     setSnackbarOpen(true);
   };
 
-  const filteredSedes = SEDES_LIST.filter((sede) => {
+  const handleOpenAssignDialog = (sede) => {
+    setTargetSedeForEdit(sede);
+    setEditAdminName(sede.sede_admin?.name || sede.pastors || '');
+    setEditAdminEmail(sede.sede_admin?.email || `admin.${sede.id}@restauracionglobal.org`);
+    setEditAdminUsername(sede.sede_admin?.username || `admin_${sede.id.replace('-', '')}`);
+    setEditAdminPhone(sede.sede_admin?.phone || sede.donation.phone || '');
+    setEditAdminNotes(sede.sede_admin?.notes || '');
+    setAssignDialogOpen(true);
+  };
+
+  const handleSaveAssignAdmin = () => {
+    if (!targetSedeForEdit || !editAdminName) return;
+
+    const updated = assignSedeAdmin(targetSedeForEdit.id, {
+      name: editAdminName,
+      email: editAdminEmail,
+      username: editAdminUsername,
+      phone: editAdminPhone,
+      notes: editAdminNotes,
+      assignedBy: user?.name || "L. Infante (Dueño) / Admin Principal",
+      status: "Activo"
+    });
+
+    setSedesList(updated);
+    setAssignDialogOpen(false);
+    setSnackbarMsg(`¡Administrador de ${targetSedeForEdit.name} asignado con éxito!`);
+    setSnackbarOpen(true);
+  };
+
+  const filteredSedes = sedesList.filter((sede) => {
     if (selectedState === 'ALL') return true;
     if (selectedState === 'CARACAS') return sede.state === 'Distrito Capital' || sede.state === 'Miranda';
     if (selectedState === 'ARAGUA') return sede.state === 'Aragua';
@@ -91,8 +142,8 @@ export default function Sedes() {
             Ubica tu sede más cercana, conoce a sus pastores, horarios de reunión y formas de ofrendar.
           </Typography>
 
-          {/* Quick Stats */}
-          <Stack direction="row" spacing={2} sx={{ mt: 3, flexWrap: 'wrap', gap: 1.5 }}>
+          {/* Quick Stats & Admin Actions */}
+          <Stack direction="row" spacing={2} sx={{ mt: 3, flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
             <Paper sx={{ px: 2, py: 1, backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)' }}>
               <Typography sx={{ color: '#FFFFFF', fontWeight: 800, fontSize: '1.2rem' }}>5</Typography>
               <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Sedes Activas</Typography>
@@ -105,6 +156,28 @@ export default function Sedes() {
               <Typography sx={{ color: '#6EE7B7', fontWeight: 800, fontSize: '1.2rem' }}>4 Días/Sem</Typography>
               <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Oración Online 8pm</Typography>
             </Paper>
+
+            {/* SUPER ADMIN / OWNER BUTTON TO MANAGE SEDE ADMINS */}
+            {canManageAllSedes && (
+              <Button
+                variant="contained"
+                startIcon={<AssignIcon />}
+                onClick={() => handleOpenAssignDialog(sedesList[0])}
+                sx={{
+                  backgroundColor: '#F59E0B',
+                  color: '#0F172A',
+                  fontWeight: 800,
+                  textTransform: 'none',
+                  borderRadius: '50px',
+                  px: 2.5,
+                  py: 1,
+                  boxShadow: '0 8px 20px rgba(245, 158, 11, 0.4)',
+                  '&:hover': { backgroundColor: '#D97706' }
+                }}
+              >
+                👑 Gestionar Administradores de Sede
+              </Button>
+            )}
           </Stack>
         </Box>
       </Box>
@@ -250,10 +323,55 @@ export default function Sedes() {
                     </Box>
                   </Box>
 
+                  {/* SEDE ADMIN BADGE & INFO */}
+                  <Box
+                    sx={{
+                      p: 1.8,
+                      borderRadius: '14px',
+                      backgroundColor: '#EFF6FF',
+                      border: '1px solid #BFDBFE'
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.6 }}>
+                      <Typography sx={{ color: '#1E40AF', fontSize: '0.74rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <AdminIcon sx={{ fontSize: 16 }} />
+                        Administrador de Sede
+                      </Typography>
+                      {canManageAllSedes && (
+                        <Tooltip title="Asignar o Cambiar Administrador de esta Sede">
+                          <Button
+                            size="small"
+                            startIcon={<EditIcon sx={{ fontSize: 14 }} />}
+                            onClick={() => handleOpenAssignDialog(sede)}
+                            sx={{
+                              fontSize: '0.72rem',
+                              textTransform: 'none',
+                              fontWeight: 700,
+                              py: 0.2,
+                              px: 1,
+                              borderRadius: '50px',
+                              backgroundColor: '#FFFFFF',
+                              color: '#1E40AF',
+                              border: '1px solid #93C5FD'
+                            }}
+                          >
+                            Asignar Admin
+                          </Button>
+                        </Tooltip>
+                      )}
+                    </Box>
+                    <Typography sx={{ fontWeight: 800, color: '#1E3A8A', fontSize: '0.95rem' }}>
+                      {sede.sede_admin?.name || sede.pastors}
+                    </Typography>
+                    <Typography sx={{ color: '#475569', fontSize: '0.78rem' }}>
+                      Usuario: <code>{sede.sede_admin?.username || `admin_${sede.id.replace('-', '')}`}</code> • Estado: <span style={{ color: '#059669', fontWeight: 700 }}>Activo</span>
+                    </Typography>
+                  </Box>
+
                   {/* Pastoral Team */}
                   <Box>
                     <Typography sx={{ color: '#64748B', fontSize: '0.74rem', fontWeight: 600, textTransform: 'uppercase', mb: 0.5 }}>
-                      Pastores & Liderazgo
+                      Pastores de la Sede
                     </Typography>
                     <Typography sx={{ fontWeight: 700, color: '#1E293B', fontSize: '0.95rem' }}>
                       {sede.pastors}
@@ -339,7 +457,7 @@ export default function Sedes() {
                       </Button>
                     )}
 
-                    {isAdmin && (
+                    {canManageAllSedes && (
                       <Button
                         size="small"
                         variant={isUserSede ? 'contained' : 'outlined'}
@@ -366,87 +484,116 @@ export default function Sedes() {
         })}
       </Grid>
 
-      {/* Online Prayer Banner (¿Oramos por ti? from Website) */}
-      <Box
-        sx={{
-          mt: 5,
-          p: { xs: 3, sm: 4 },
-          borderRadius: '20px',
-          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-          color: '#FFFFFF',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 3
-        }}
+      {/* ADMIN ASSIGNMENT MODAL DIALOG */}
+      <Dialog
+        open={assignDialogOpen}
+        onClose={() => setAssignDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: '20px', p: 1 } }}
       >
-        <Box sx={{ maxWidth: '680px' }}>
-          <Chip
-            icon={<PrayerIcon sx={{ color: '#F472B6 !important', fontSize: 16 }} />}
-            label="TIEMPO DE INTERCESIÓN ONLINE"
-            size="small"
-            sx={{
-              backgroundColor: 'rgba(244, 114, 182, 0.15)',
-              color: '#FBCFE8',
-              fontWeight: 700,
-              fontSize: '0.72rem',
-              mb: 1
-            }}
-          />
-          <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, letterSpacing: '-0.01em' }}>
-            ¿Oramos por ti?
-          </Typography>
-          <Typography sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.92rem', lineHeight: 1.6 }}>
-            No pases por tus luchas en soledad, en <strong>Restauración Global</strong> oramos contigo.
-            Cada <strong>lunes, martes, jueves y viernes a las 8:00 pm</strong>, nuestro equipo se conecta vía Google Meet
-            con el único propósito de interceder por tus necesidades. ¡Hay una familia respaldándote!
-          </Typography>
-        </Box>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.25rem', color: '#0F172A', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AdminIcon sx={{ color: '#F59E0B' }} />
+          Asignar Administrador de Sede
+        </DialogTitle>
+        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2.2, pt: 2 }}>
+          <Box sx={{ p: 1.5, borderRadius: '12px', backgroundColor: '#FEF3C7', border: '1px solid #FCD34D' }}>
+            <Typography sx={{ color: '#92400E', fontSize: '0.84rem', fontWeight: 700 }}>
+              Asignación autorizada por: {user?.name || "L. Infante / Pastor Principal"}
+            </Typography>
+            <Typography sx={{ color: '#B45309', fontSize: '0.78rem' }}>
+              El administrador asignado tendrá autoridad local para evaluar actividades, gestionar anuncios y supervisar miembros en su sede.
+            </Typography>
+          </Box>
 
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ width: { xs: '100%', md: 'auto' } }}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="sede-select-label">Sede a Asignar</InputLabel>
+            <Select
+              labelId="sede-select-label"
+              value={targetSedeForEdit?.id || ''}
+              label="Sede a Asignar"
+              onChange={(e) => {
+                const s = sedesList.find((x) => x.id === e.target.value);
+                if (s) handleOpenAssignDialog(s);
+              }}
+            >
+              {sedesList.map((s) => (
+                <MenuItem key={s.id} value={s.id}>
+                  {s.name} ({s.city})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField
+            fullWidth
+            label="Nombre Completo del Administrador de Sede *"
+            value={editAdminName}
+            onChange={(e) => setEditAdminName(e.target.value)}
+            placeholder="Ej: Pastor Wilmer / Alexander López"
+            size="small"
+          />
+
+          <TextField
+            fullWidth
+            label="Usuario de Acceso"
+            value={editAdminUsername}
+            onChange={(e) => setEditAdminUsername(e.target.value)}
+            placeholder="Ej: admin_maracay"
+            size="small"
+            helperText="Usuario para iniciar sesión en la app"
+          />
+
+          <TextField
+            fullWidth
+            label="Correo Electrónico Oficial"
+            value={editAdminEmail}
+            onChange={(e) => setEditAdminEmail(e.target.value)}
+            placeholder="Ej: admin.maracay@restauracionglobal.org"
+            size="small"
+          />
+
+          <TextField
+            fullWidth
+            label="Teléfono / Contacto Ministerial"
+            value={editAdminPhone}
+            onChange={(e) => setEditAdminPhone(e.target.value)}
+            placeholder="Ej: 0414-3172261"
+            size="small"
+          />
+
+          <TextField
+            fullWidth
+            label="Notas Ministeriales o Facultades"
+            value={editAdminNotes}
+            onChange={(e) => setEditAdminNotes(e.target.value)}
+            placeholder="Facultad delegada para discipulado, finanzas locales y liderazgo"
+            size="small"
+            multiline
+            rows={2}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setAssignDialogOpen(false)} variant="outlined" sx={{ borderRadius: '50px' }}>
+            Cancelar
+          </Button>
           <Button
-            component="a"
-            href={CHURCH_INFO.youtube}
-            target="_blank"
-            rel="noopener noreferrer"
+            onClick={handleSaveAssignAdmin}
             variant="contained"
-            startIcon={<YouTubeIcon />}
+            disabled={!editAdminName}
             sx={{
-              borderRadius: '50px',
-              backgroundColor: '#EF4444',
+              backgroundColor: '#83050B',
               color: '#FFFFFF',
+              borderRadius: '50px',
               fontWeight: 700,
-              textTransform: 'none',
               px: 3,
-              py: 1.2,
-              '&:hover': { backgroundColor: '#DC2626' }
+              '&:hover': { backgroundColor: '#650409' }
             }}
           >
-            Prédicas en YouTube
+            Guardar y Asignar Admin
           </Button>
-          <Button
-            component="a"
-            href={CHURCH_INFO.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="outlined"
-            sx={{
-              borderRadius: '50px',
-              borderColor: 'rgba(255, 255, 255, 0.3)',
-              color: '#FFFFFF',
-              fontWeight: 600,
-              textTransform: 'none',
-              px: 3,
-              py: 1.2,
-              '&:hover': { borderColor: '#FFFFFF', backgroundColor: 'rgba(255,255,255,0.08)' }
-            }}
-          >
-            Sitio Web Oficial
-          </Button>
-        </Stack>
-      </Box>
+        </DialogActions>
+      </Dialog>
 
       {/* Copy Notification */}
       <Snackbar

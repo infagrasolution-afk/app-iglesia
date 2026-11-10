@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
-import { SEDES_LIST } from '../data/sedesData';
+import { getSedesList, assignSedeAdmin, INITIAL_SEDES_LIST } from '../data/sedesData';
 
 const AuthContext = createContext();
 
@@ -24,7 +24,7 @@ export function AuthProvider({ children }) {
     }
   });
 
-  // Current active Sede in the session (Admin can switch or see 'TODAS', non-admin is locked to their registered Sede)
+  // Current active Sede in session
   const [currentSede, setCurrentSedeState] = useState(() => {
     try {
       const savedSede = localStorage.getItem('currentSede');
@@ -32,7 +32,9 @@ export function AuthProvider({ children }) {
       const savedUser = localStorage.getItem('user');
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
-        if (parsed.role === 'ADMIN') return 'TODAS';
+        if (parsed.role === 'SUPER_ADMIN' || parsed.role === 'ADMIN_PRINCIPAL' || parsed.role === 'ADMIN') {
+          return 'TODAS';
+        }
         return parsed.sede || 'plaza-venezuela';
       }
       return 'TODAS';
@@ -48,10 +50,14 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password, selectedSede = null) => {
     const normalizedKey = (email || '').toLowerCase().trim();
-    const isAdmin = normalizedKey === 'admin' || normalizedKey === 'admin@iglesia.org';
+
+    // Check if user is Super Admin (Owner) or Admin Principal
+    const isOwner = normalizedKey === 'linfante' || normalizedKey === 'linfante@restauracionglobal.org';
+    const isGeneralAdmin = normalizedKey === 'admin' || normalizedKey === 'admin@iglesia.org';
+    const hasGlobalAccess = isOwner || isGeneralAdmin;
 
     // Sede to assign
-    const assignedSede = isAdmin ? 'TODAS' : (selectedSede || 'plaza-venezuela');
+    const assignedSede = hasGlobalAccess ? 'TODAS' : (selectedSede || 'plaza-venezuela');
 
     try {
       const data = await authAPI.login({ email, password });
@@ -71,38 +77,173 @@ export function AuthProvider({ children }) {
       setCurrentSedeState(assignedSede);
       return { success: true, user: authUser };
     } catch (error) {
-      // If backend error or offline, check default credentials
+      // Default / offline credentials check
       const defaultUsers = {
-        'admin': { id: 1, full_name: 'Pastor Principal Said Carrasquel (Admin)', name: 'Said Carrasquel', role: 'ADMIN' },
-        'admin@iglesia.org': { id: 1, full_name: 'Pastor Principal Said Carrasquel (Admin)', name: 'Said Carrasquel', role: 'ADMIN' },
-        'lider': { id: 2, full_name: 'Líder Ministerial (Líder)', name: 'Líder Ministerial', role: 'LIDER' },
-        'lider@iglesia.org': { id: 2, full_name: 'Líder Ministerial (Líder)', name: 'Líder Ministerial', role: 'LIDER' },
-        'miembro': { id: 3, full_name: 'Carlos Martínez (Miembro)', name: 'Carlos Martínez', role: 'MIEMBRO' },
-        'miembro@iglesia.org': { id: 3, full_name: 'Carlos Martínez (Miembro)', name: 'Carlos Martínez', role: 'MIEMBRO' }
+        // 1. OWNER / DUEÑO DE LA APP
+        'linfante': {
+          id: 100,
+          username: 'linfante',
+          full_name: 'Ing. L. Infante (Dueño de la App)',
+          name: 'L. Infante',
+          role: 'SUPER_ADMIN',
+          isOwner: true,
+          sede: 'TODAS',
+          passwordReq: 'aa11..**'
+        },
+        'linfante@restauracionglobal.org': {
+          id: 100,
+          username: 'linfante',
+          full_name: 'Ing. L. Infante (Dueño de la App)',
+          name: 'L. Infante',
+          role: 'SUPER_ADMIN',
+          isOwner: true,
+          sede: 'TODAS',
+          passwordReq: 'aa11..**'
+        },
+
+        // 2. PASTOR PRINCIPAL / ADMIN GENERAL
+        'admin': {
+          id: 1,
+          username: 'admin',
+          full_name: 'Pastor Principal Said Carrasquel (Admin General)',
+          name: 'Said Carrasquel',
+          role: 'ADMIN_PRINCIPAL',
+          isOwner: false,
+          sede: 'TODAS',
+          passwordReq: 'admin'
+        },
+        'admin@iglesia.org': {
+          id: 1,
+          username: 'admin',
+          full_name: 'Pastor Principal Said Carrasquel (Admin General)',
+          name: 'Said Carrasquel',
+          role: 'ADMIN_PRINCIPAL',
+          isOwner: false,
+          sede: 'TODAS',
+          passwordReq: 'admin'
+        },
+
+        // 3. SEDE ADMINS
+        'admin_maracay': {
+          id: 11,
+          username: 'admin_maracay',
+          full_name: 'Pastor Wilmer (Admin Sede Maracay)',
+          name: 'Pastor Wilmer',
+          role: 'ADMIN_SEDE',
+          sede: 'maracay',
+          passwordReq: '123'
+        },
+        'admin_plazavzla': {
+          id: 10,
+          username: 'admin_plazavzla',
+          full_name: 'Alexander López (Admin Plaza Venezuela)',
+          name: 'Alexander López',
+          role: 'ADMIN_SEDE',
+          sede: 'plaza-venezuela',
+          passwordReq: '123'
+        },
+        'admin_lasuiza': {
+          id: 12,
+          username: 'admin_lasuiza',
+          full_name: 'Pastor Moisés Gómez (Admin Sede La Suiza)',
+          name: 'Pastor Moisés',
+          role: 'ADMIN_SEDE',
+          sede: 'la-suiza',
+          passwordReq: '123'
+        },
+        'admin_sucre': {
+          id: 13,
+          username: 'admin_sucre',
+          full_name: 'Pastor Ezequiel Carrasquel (Admin Sede Sucre)',
+          name: 'Pastor Ezequiel',
+          role: 'ADMIN_SEDE',
+          sede: 'sucre',
+          passwordReq: '123'
+        },
+        'admin_maracaibo': {
+          id: 14,
+          username: 'admin_maracaibo',
+          full_name: 'Pastor Daniel Osorio (Admin Sede Maracaibo)',
+          name: 'Pastor Daniel',
+          role: 'ADMIN_SEDE',
+          sede: 'maracaibo',
+          passwordReq: '123'
+        },
+
+        // 4. LÍDER & MIEMBRO
+        'lider': {
+          id: 2,
+          username: 'lider',
+          full_name: 'Líder de Jóvenes (Líder)',
+          name: 'Líder de Jóvenes',
+          role: 'LIDER',
+          sede: 'plaza-venezuela',
+          passwordReq: '123'
+        },
+        'lider@iglesia.org': {
+          id: 2,
+          username: 'lider',
+          full_name: 'Líder de Jóvenes (Líder)',
+          name: 'Líder de Jóvenes',
+          role: 'LIDER',
+          sede: 'plaza-venezuela',
+          passwordReq: '123'
+        },
+        'miembro': {
+          id: 3,
+          username: 'miembro',
+          full_name: 'Carlos Martínez (Miembro)',
+          name: 'Carlos Martínez',
+          role: 'MIEMBRO',
+          sede: 'maracay',
+          passwordReq: '123'
+        },
+        'miembro@iglesia.org': {
+          id: 3,
+          username: 'miembro',
+          full_name: 'Carlos Martínez (Miembro)',
+          name: 'Carlos Martínez',
+          role: 'MIEMBRO',
+          sede: 'maracay',
+          passwordReq: '123'
+        }
       };
 
       const matchedUser = defaultUsers[normalizedKey];
 
-      if (matchedUser && (password === '123456' || password === 'admin' || password === '123' || password === 'password123' || true)) {
-        const userSede = matchedUser.role === 'ADMIN' ? 'TODAS' : (selectedSede || 'plaza-venezuela');
-        const mockUser = {
-          ...matchedUser,
-          email: normalizedKey,
-          sede: userSede
-        };
-        const mockToken = 'mock-jwt-token-demo';
-        localStorage.setItem('token', mockToken);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        localStorage.setItem('currentSede', userSede);
+      if (matchedUser) {
+        // Validate password
+        const expected = matchedUser.passwordReq;
+        const isValidPass =
+          password === expected ||
+          (expected === 'admin' && (password === '123456' || password === 'admin')) ||
+          (expected === '123' && (password === '123' || password === '123456')) ||
+          (matchedUser.isOwner && password === 'aa11..**');
 
-        setToken(mockToken);
-        setUser(mockUser);
-        setRoleState(mockUser.role);
-        setCurrentSedeState(userSede);
-        return { success: true, user: mockUser };
+        if (isValidPass) {
+          const userSede = (matchedUser.role === 'SUPER_ADMIN' || matchedUser.role === 'ADMIN_PRINCIPAL')
+            ? 'TODAS'
+            : (matchedUser.sede || selectedSede || 'plaza-venezuela');
+
+          const mockUser = {
+            ...matchedUser,
+            email: normalizedKey.includes('@') ? normalizedKey : `${normalizedKey}@restauracionglobal.org`,
+            sede: userSede
+          };
+          const mockToken = `mock-token-${matchedUser.username}-${Date.now()}`;
+          localStorage.setItem('token', mockToken);
+          localStorage.setItem('user', JSON.stringify(mockUser));
+          localStorage.setItem('currentSede', userSede);
+
+          setToken(mockToken);
+          setUser(mockUser);
+          setRoleState(mockUser.role);
+          setCurrentSedeState(userSede);
+          return { success: true, user: mockUser };
+        }
       }
 
-      return { success: false, error: error.message || 'Credenciales incorrectas' };
+      return { success: false, error: 'Credenciales incorrectas. Verifica tu usuario y contraseña.' };
     }
   };
 
@@ -119,7 +260,8 @@ export function AuthProvider({ children }) {
   const switchRole = (newRole) => {
     setRoleState(newRole);
     if (user) {
-      const userSede = newRole === 'ADMIN' ? 'TODAS' : (user.sede && user.sede !== 'TODAS' ? user.sede : 'plaza-venezuela');
+      const isGlobal = newRole === 'SUPER_ADMIN' || newRole === 'ADMIN_PRINCIPAL' || newRole === 'ADMIN';
+      const userSede = isGlobal ? 'TODAS' : (user.sede && user.sede !== 'TODAS' ? user.sede : 'plaza-venezuela');
       const updated = { ...user, role: newRole, sede: userSede };
       setUser(updated);
       localStorage.setItem('user', JSON.stringify(updated));
@@ -127,14 +269,26 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const demoLogin = async (roleType, sede = 'plaza-venezuela') => {
+  const demoLogin = async (roleType, sede = 'maracay') => {
     const map = {
-      ADMIN: { email: 'admin@iglesia.org', password: 'admin', sede: 'TODAS' },
-      LIDER: { email: 'lider@iglesia.org', password: '123', sede: sede || 'plaza-venezuela' },
-      MIEMBRO: { email: 'miembro@iglesia.org', password: '123', sede: sede || 'plaza-venezuela' }
+      SUPER_ADMIN: { email: 'linfante', password: 'aa11..**', sede: 'TODAS' },
+      ADMIN_PRINCIPAL: { email: 'admin', password: 'admin', sede: 'TODAS' },
+      ADMIN: { email: 'admin', password: 'admin', sede: 'TODAS' },
+      ADMIN_SEDE: { email: 'admin_maracay', password: '123', sede: 'maracay' },
+      LIDER: { email: 'lider', password: '123', sede: sede || 'plaza-venezuela' },
+      MIEMBRO: { email: 'miembro', password: '123', sede: sede || 'maracay' }
     };
     const creds = map[roleType] || map.MIEMBRO;
     return await login(creds.email, creds.password, creds.sede);
+  };
+
+  // Helper to assign a Sede Admin
+  const handleAssignAdmin = (sedeId, adminData) => {
+    const updatedList = assignSedeAdmin(sedeId, {
+      ...adminData,
+      assignedBy: user?.name || "L. Infante / Pastor Principal"
+    });
+    return updatedList;
   };
 
   // Helper to get active sede details
@@ -148,8 +302,14 @@ export function AuthProvider({ children }) {
         badge: 'Global'
       };
     }
-    return SEDES_LIST.find((s) => s.id === currentSede) || SEDES_LIST[0];
+    const list = getSedesList();
+    return list.find((s) => s.id === currentSede) || list[0];
   };
+
+  const isSuperAdmin = currentRole === 'SUPER_ADMIN' || user?.username === 'linfante';
+  const isAdminPrincipal = isSuperAdmin || currentRole === 'ADMIN_PRINCIPAL' || currentRole === 'ADMIN';
+  const isSedeAdmin = currentRole === 'ADMIN_SEDE';
+  const canManageAllSedes = isSuperAdmin || isAdminPrincipal;
 
   return (
     <AuthContext.Provider
@@ -161,11 +321,16 @@ export function AuthProvider({ children }) {
         setCurrentSede,
         activeSedeDetails: getActiveSedeDetails(),
         isAuthenticated: Boolean(user && token),
-        isAdmin: currentRole === 'ADMIN',
+        isSuperAdmin,
+        isAdminPrincipal,
+        isSedeAdmin,
+        canManageAllSedes,
+        isAdmin: canManageAllSedes || isSedeAdmin,
         login,
         logout,
         demoLogin,
-        setRole: switchRole
+        setRole: switchRole,
+        assignSedeAdmin: handleAssignAdmin
       }}
     >
       {children}

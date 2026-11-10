@@ -1,13 +1,82 @@
 [
   {
+    "id": 100,
+    "username": "linfante",
+    "email": "linfante@restauracionglobal.org",
+    "full_name": "Ing. L. Infante (Dueño de la App / Super Admin)",
+    "password": "aa11..**",
+    "role": "SUPER_ADMIN",
+    "is_owner": true,
+    "sede": "TODAS",
+    "permissions": ["ALL", "ASSIGN_SEDE_ADMINS", "MANAGE_SEDES", "MANAGE_SYSTEM"],
+    "created_at": "2026-11-10 16:00:00"
+  },
+  {
     "id": 1,
     "username": "admin",
     "email": "admin@iglesia.org",
-    "full_name": "Pastor Principal (Admin)",
+    "full_name": "Pastor Principal Said Carrasquel (Admin General)",
     "password": "admin",
-    "hashed_password": "$2b$12$xhSTQ9HvkCr5LSy65nCm/u4wWnsnZc1J0BuR5zRckG/H9LXvM8cyO",
-    "role": "ADMIN",
+    "role": "ADMIN_PRINCIPAL",
+    "is_owner": false,
+    "sede": "TODAS",
+    "permissions": ["ALL", "ASSIGN_SEDE_ADMINS", "MANAGE_SEDES", "MANAGE_SYSTEM"],
     "created_at": "2026-08-19 20:13:32"
+  },
+  {
+    "id": 10,
+    "username": "admin_plazavzla",
+    "email": "admin.plazavzla@restauracionglobal.org",
+    "full_name": "Alexander López (Admin Plaza Venezuela)",
+    "password": "123",
+    "role": "ADMIN_SEDE",
+    "sede": "plaza-venezuela",
+    "permissions": ["MANAGE_LOCAL_SEDE", "DISCIPLESHIP_EVALUATE", "LOCAL_ANNOUNCEMENTS"],
+    "created_at": "2026-11-10 16:00:00"
+  },
+  {
+    "id": 11,
+    "username": "admin_maracay",
+    "email": "admin.maracay@restauracionglobal.org",
+    "full_name": "Pastor Wilmer (Admin Sede Maracay)",
+    "password": "123",
+    "role": "ADMIN_SEDE",
+    "sede": "maracay",
+    "permissions": ["MANAGE_LOCAL_SEDE", "DISCIPLESHIP_EVALUATE", "LOCAL_ANNOUNCEMENTS"],
+    "created_at": "2026-11-10 16:00:00"
+  },
+  {
+    "id": 12,
+    "username": "admin_lasuiza",
+    "email": "admin.lasuiza@restauracionglobal.org",
+    "full_name": "Pastor Moisés Gómez (Admin Sede La Suiza)",
+    "password": "123",
+    "role": "ADMIN_SEDE",
+    "sede": "la-suiza",
+    "permissions": ["MANAGE_LOCAL_SEDE", "DISCIPLESHIP_EVALUATE", "LOCAL_ANNOUNCEMENTS"],
+    "created_at": "2026-11-10 16:00:00"
+  },
+  {
+    "id": 13,
+    "username": "admin_sucre",
+    "email": "admin.sucre@restauracionglobal.org",
+    "full_name": "Pastor Ezequiel Carrasquel (Admin Sede Sucre)",
+    "password": "123",
+    "role": "ADMIN_SEDE",
+    "sede": "sucre",
+    "permissions": ["MANAGE_LOCAL_SEDE", "DISCIPLESHIP_EVALUATE", "LOCAL_ANNOUNCEMENTS"],
+    "created_at": "2026-11-10 16:00:00"
+  },
+  {
+    "id": 14,
+    "username": "admin_maracaibo",
+    "email": "admin.maracaibo@restauracionglobal.org",
+    "full_name": "Pastor Daniel Osorio (Admin Sede Maracaibo)",
+    "password": "123",
+    "role": "ADMIN_SEDE",
+    "sede": "maracaibo",
+    "permissions": ["MANAGE_LOCAL_SEDE", "DISCIPLESHIP_EVALUATE", "LOCAL_ANNOUNCEMENTS"],
+    "created_at": "2026-11-10 16:00:00"
   },
   {
     "id": 2,
@@ -15,8 +84,9 @@
     "email": "lider@iglesia.org",
     "full_name": "Líder de Jóvenes (Líder)",
     "password": "123",
-    "hashed_password": "$2b$12$xhSTQ9HvkCr5LSy65nCm/u4wWnsnZc1J0BuR5zRckG/H9LXvM8cyO",
     "role": "LIDER",
+    "sede": "plaza-venezuela",
+    "permissions": ["LEADER_PRAYERS", "DISCIPLESHIP_MENTOR"],
     "created_at": "2026-08-19 20:13:32"
   },
   {
@@ -25,8 +95,9 @@
     "email": "miembro@iglesia.org",
     "full_name": "Carlos Martínez (Miembro)",
     "password": "123",
-    "hashed_password": "$2b$12$xhSTQ9HvkCr5LSy65nCm/u4wWnsnZc1J0BuR5zRckG/H9LXvM8cyO",
     "role": "MIEMBRO",
+    "sede": "maracay",
+    "permissions": ["MEMBER_VIEW", "DISCIPLESHIP_STUDENT"],
     "created_at": "2026-08-19 20:13:32"
   }
 ]

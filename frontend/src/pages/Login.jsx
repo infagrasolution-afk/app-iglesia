@@ -44,9 +44,21 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Check if current input is admin
+  // Check user role types
   const normalizedUser = (username || '').toLowerCase().trim();
-  const isAdminUser = normalizedUser === 'admin' || normalizedUser === 'admin@iglesia.org';
+  const isOwnerUser = normalizedUser === 'linfante' || normalizedUser === 'linfante@restauracionglobal.org';
+  const isGeneralAdmin = normalizedUser === 'admin' || normalizedUser === 'admin@iglesia.org';
+  const isSedeAdminUser = normalizedUser.startsWith('admin_');
+  const hasGlobalAccess = isOwnerUser || isGeneralAdmin;
+
+  // Auto-detect sede for Sede Admins
+  useEffect(() => {
+    if (normalizedUser === 'admin_maracay') setSelectedSede('maracay');
+    else if (normalizedUser === 'admin_plazavzla') setSelectedSede('plaza-venezuela');
+    else if (normalizedUser === 'admin_lasuiza') setSelectedSede('la-suiza');
+    else if (normalizedUser === 'admin_sucre') setSelectedSede('sucre');
+    else if (normalizedUser === 'admin_maracaibo') setSelectedSede('maracaibo');
+  }, [normalizedUser]);
 
   // If already authenticated, redirect to portal
   useEffect(() => {
@@ -64,15 +76,15 @@ export default function Login() {
       return;
     }
 
-    // If not admin, require a valid sede
-    if (!isAdminUser && !selectedSede) {
+    // If not global admin, require a valid sede
+    if (!hasGlobalAccess && !selectedSede) {
       setErrorMsg('Debes indicar a qué sede de Restauración Global perteneces.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await login(username, password, isAdminUser ? 'TODAS' : selectedSede);
+      const res = await login(username, password, hasGlobalAccess ? 'TODAS' : selectedSede);
       if (res.success) {
         navigate('/prayers');
       } else {
@@ -86,10 +98,18 @@ export default function Login() {
   };
 
   const handleQuickDemo = (role, defaultSede) => {
-    if (role === 'admin') {
+    if (role === 'owner') {
+      setUsername('linfante');
+      setPassword('aa11..**');
+      setSelectedSede('plaza-venezuela');
+    } else if (role === 'admin') {
       setUsername('admin');
       setPassword('admin');
       setSelectedSede('plaza-venezuela');
+    } else if (role === 'admin_sede') {
+      setUsername('admin_maracay');
+      setPassword('123');
+      setSelectedSede('maracay');
     } else if (role === 'lider') {
       setUsername('lider');
       setPassword('123');
@@ -315,8 +335,31 @@ export default function Login() {
 
         {/* SEDE SELECTION SECTION */}
         <Box sx={{ width: '100%', mt: 1.8, textAlign: 'left' }}>
-          {isAdminUser ? (
-            /* Admin Notification: Global Access */
+          {isOwnerUser ? (
+            /* Owner / Super Admin Notification */
+            <Box
+              sx={{
+                p: 1.4,
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.25) 0%, rgba(194, 65, 12, 0.15) 100%)',
+                border: '1.5px solid rgba(251, 146, 60, 0.6)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.2
+              }}
+            >
+              <GlobalIcon sx={{ color: '#FDBA74', fontSize: 26 }} />
+              <Box>
+                <Typography sx={{ color: '#FFEDD5', fontWeight: 800, fontSize: '0.84rem', lineHeight: 1.2 }}>
+                  👑 Dueño de la App / Super Admin (L. Infante)
+                </Typography>
+                <Typography sx={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.74rem' }}>
+                  Acceso supremo a <strong>todas las sedes</strong>, control total y asignación de administradores de sede.
+                </Typography>
+              </Box>
+            </Box>
+          ) : isGeneralAdmin ? (
+            /* General Admin Notification: Global Access */
             <Box
               sx={{
                 p: 1.4,
@@ -331,10 +374,33 @@ export default function Login() {
               <GlobalIcon sx={{ color: '#FCD34D', fontSize: 26 }} />
               <Box>
                 <Typography sx={{ color: '#FEF3C7', fontWeight: 700, fontSize: '0.82rem', lineHeight: 1.2 }}>
-                  Acceso de Administrador Global
+                  🏛️ Pastor Principal / Admin General
                 </Typography>
                 <Typography sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.74rem' }}>
                   El usuario admin tiene vista y control de <strong>todas las sedes</strong> nacionales.
+                </Typography>
+              </Box>
+            </Box>
+          ) : isSedeAdminUser ? (
+            /* Sede Admin Notification */
+            <Box
+              sx={{
+                p: 1.4,
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.15) 100%)',
+                border: '1px solid rgba(96, 165, 250, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.2
+              }}
+            >
+              <LocationIcon sx={{ color: '#93C5FD', fontSize: 26 }} />
+              <Box>
+                <Typography sx={{ color: '#EFF6FF', fontWeight: 700, fontSize: '0.82rem', lineHeight: 1.2 }}>
+                  🏢 Administrador de Sede Asignado
+                </Typography>
+                <Typography sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.74rem' }}>
+                  Administras localmente tu sede con autoridad pastoral y de discipulado.
                 </Typography>
               </Box>
             </Box>
@@ -507,10 +573,26 @@ export default function Login() {
             Acceso Rápido para Pruebas:
           </Typography>
           <Box sx={{ display: 'flex', gap: 0.8, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Tooltip title="Admin con acceso global a todas las sedes">
+            <Tooltip title="Dueño de la App / Super Admin (L. Infante: linfante / aa11..**)">
               <Chip
                 size="small"
-                label="👑 Admin (Global)"
+                label="👑 Linfante (Dueño)"
+                onClick={() => handleQuickDemo('owner')}
+                sx={{
+                  backgroundColor: 'rgba(234, 88, 12, 0.25)',
+                  color: '#FED7AA',
+                  border: '1px solid rgba(251, 146, 60, 0.6)',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '0.74rem',
+                  '&:hover': { backgroundColor: 'rgba(234, 88, 12, 0.45)' }
+                }}
+              />
+            </Tooltip>
+            <Tooltip title="Pastor Principal (Said Carrasquel: admin / admin)">
+              <Chip
+                size="small"
+                label="🏛️ Admin General"
                 onClick={() => handleQuickDemo('admin')}
                 sx={{
                   backgroundColor: 'rgba(245, 158, 11, 0.2)',
@@ -523,11 +605,11 @@ export default function Login() {
                 }}
               />
             </Tooltip>
-            <Tooltip title="Líder ministerial en Sede Plaza Venezuela">
+            <Tooltip title="Administrador de Sede (Pastor Wilmer: admin_maracay / 123)">
               <Chip
                 size="small"
-                label="👥 Líder (Plaza Vzla)"
-                onClick={() => handleQuickDemo('lider', 'plaza-venezuela')}
+                label="🏢 Admin Sede (Maracay)"
+                onClick={() => handleQuickDemo('admin_sede')}
                 sx={{
                   backgroundColor: 'rgba(59, 130, 246, 0.2)',
                   color: '#BFDBFE',

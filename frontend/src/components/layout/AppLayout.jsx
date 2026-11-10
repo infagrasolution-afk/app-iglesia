@@ -352,18 +352,24 @@ export default function AppLayout({ children }) {
           >
             <Box sx={{ px: 2, py: 1 }}>
               <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700 }}>
-                MODO DE PRUEBA (ROLES)
+                CAMBIAR ROL DE USUARIO
               </Typography>
             </Box>
             <Divider />
-            <MenuItem onClick={() => handleRoleMenuClose('MIEMBRO')} selected={currentRole === 'MIEMBRO'}>
-              <ListItemText primary="Miembro" secondary="Vista de discípulo en su sede" />
+            <MenuItem onClick={() => handleRoleMenuClose('SUPER_ADMIN')} selected={currentRole === 'SUPER_ADMIN'}>
+              <ListItemText primary="👑 Dueño de la App (Super Admin)" secondary="Control global supremo y asignación de admins" />
+            </MenuItem>
+            <MenuItem onClick={() => handleRoleMenuClose('ADMIN_PRINCIPAL')} selected={currentRole === 'ADMIN_PRINCIPAL'}>
+              <ListItemText primary="🏛️ Pastor Principal (Admin General)" secondary="Supervisión nacional de todas las sedes" />
+            </MenuItem>
+            <MenuItem onClick={() => handleRoleMenuClose('ADMIN_SEDE')} selected={currentRole === 'ADMIN_SEDE'}>
+              <ListItemText primary="🏢 Administrador de Sede" secondary="Liderazgo administrativo de sede" />
             </MenuItem>
             <MenuItem onClick={() => handleRoleMenuClose('LIDER')} selected={currentRole === 'LIDER'}>
-              <ListItemText primary="Líder" secondary="Discipulador de sede" />
+              <ListItemText primary="👥 Líder Ministerial" secondary="Discipulador y consejero" />
             </MenuItem>
-            <MenuItem onClick={() => handleRoleMenuClose('ADMIN')} selected={currentRole === 'ADMIN'}>
-              <ListItemText primary="Administrador / Pastor" secondary="Ve todas las sedes y evalúa todo" />
+            <MenuItem onClick={() => handleRoleMenuClose('MIEMBRO')} selected={currentRole === 'MIEMBRO'}>
+              <ListItemText primary="🌱 Miembro / Discípulo" secondary="Vista de miembro en su sede" />
             </MenuItem>
             <Divider sx={{ my: 0.5 }} />
             <MenuItem
