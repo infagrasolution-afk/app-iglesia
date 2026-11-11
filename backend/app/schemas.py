@@ -7,13 +7,18 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: str
     role: str = "MIEMBRO"
+    username: Optional[str] = None
+    sede: Optional[str] = "TODAS"
+    is_owner: Optional[bool] = False
+    is_global_pastor: Optional[bool] = False
+    must_change_password: Optional[bool] = False
 
 class UserCreate(UserBase):
     password: str
 
 class UserResponse(UserBase):
     id: int
-    created_at: datetime
+    created_at: Optional[datetime] = None
     class Config:
         from_attributes = True
 
@@ -25,6 +30,34 @@ class Token(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+class ChangePasswordRequest(BaseModel):
+    user_id: int
+    new_password: str
+    old_password: Optional[str] = None
+
+class PasswordResetCreate(BaseModel):
+    identifier: str # Username o Email
+    phone: Optional[str] = None
+    sede_id: Optional[str] = None
+    full_name: Optional[str] = None
+
+class PasswordResetResponse(BaseModel):
+    id: int
+    identifier: str
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    sede_id: Optional[str] = None
+    status: str
+    temporary_password: Optional[str] = None
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class PasswordResetApproval(BaseModel):
+    status: str # "APROBADO" o "RECHAZADO"
+    temporary_password: Optional[str] = "123"
+
 
 # Prayer Schemas
 class PrayerCreate(BaseModel):

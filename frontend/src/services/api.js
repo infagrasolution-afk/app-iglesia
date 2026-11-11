@@ -37,8 +37,55 @@ export const authAPI = {
       method: 'POST',
       body: JSON.stringify(credentials)
     });
+  },
+
+  changePassword: async (userId, newPassword, oldPassword = null) => {
+    return await fetchAPI('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: userId,
+        new_password: newPassword,
+        old_password: oldPassword
+      })
+    });
+  },
+
+  requestPasswordReset: async (identifier, phone = null, sedeId = null, fullName = null) => {
+    return await fetchAPI('/auth/request-reset', {
+      method: 'POST',
+      body: JSON.stringify({
+        identifier,
+        phone,
+        sede_id: sedeId,
+        full_name: fullName
+      })
+    });
+  },
+
+  getResetRequests: async () => {
+    try {
+      return await fetchAPI('/auth/reset-requests');
+    } catch {
+      const saved = localStorage.getItem('restauracion_pwd_resets');
+      return saved ? JSON.parse(saved) : [];
+    }
+  },
+
+  approveResetRequest: async (requestId, status = 'APROBADO', temporaryPassword = '123') => {
+    try {
+      return await fetchAPI(`/auth/reset-requests/${requestId}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({
+          status,
+          temporary_password: temporaryPassword
+        })
+      });
+    } catch {
+      return { success: true, status, temporary_password: temporaryPassword };
+    }
   }
 };
+
 
 
 

@@ -1,31 +1,180 @@
-from fastapi import APIRouter, HTTPException, status
-from app import schemas, security
-from app.json_storage import UserStorage
+from fastapi import APIRouter, HTTPException, Depends, status
+from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from typing import List, Optional
+from datetime import datetime
+
+from app import schemas, security, models
+from app.database import get_db
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
-@router.post("/register", response_model=schemas.UserResponse)
-def register(user_in: schemas.UserCreate):
-    try:
-        new_user = UserStorage.create(
-            email=user_in.email,
-            full_name=user_in.full_name,
-            password=user_in.password,
-            role=user_in.role
-        )
-        return new_user
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+@router.post("/login")
+def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
+    """
+    Inicio de sesión autenticado 100% contra la base de datos PostgreSQL en Neon.
+    Permite ingresar con correo electrónico o nombre de usuario.
+    Retorna el token y si el usuario debe cambiar su contraseña obligatoriamente.
+    """
+    clean_identifier = login_data.email.strip().lower()
 
-@router.post("/login", response_model=schemas.Token)
-def login(login_data: schemas.LoginRequest):
-    user = UserStorage.verify_credentials(login_data.email, login_data.password)
+    # Buscar usuario por email o por username
+    user = db.query(models.User).filter(
+        or_(
+            models.User.email.ilike(clean_identifier),
+            models.User.username.ilike(clean_identifier)
+        )
+    ).first()
+
     if not user:
-        raise HTTPException(status_code=401, detail="Credenciales incorrectas.")
-    
-    token = security.create_access_token({"sub": user["id"], "email": user["email"], "role": user["role"]})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales incorrectas o usuario no registrado."
+        )
+
+    # Verificar contraseña encriptada o compatibilidad de transición
+    is_valid = False
+    if user.hashed_password.startswith("$2b$"):
+        is_valid = security.verify_password(login_data.password, user.hashed_password)
+    else:
+        # Si estaba en texto plano, validar y re-hashear automáticamente en PostgreSQL
+        if login_data.password == user.hashed_password:
+            is_valid = True
+            user.hashed_password = security.get_password_hash(login_data.password)
+            db.commit()
+
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Contraseña incorrecta."
+        )
+
+    # Generar Token JWT
+    token = security.create_access_token({
+        "sub": str(user.id),
+        "email": user.email,
+        "username": user.username,
+        "role": user.role,
+        "sede": user.sede
+    })
+
+    user_dict = {
+        "id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "full_name": user.full_name,
+        "role": user.role,
+        "sede": user.sede,
+        "is_owner": user.is_owner,
+        "is_global_pastor": user.is_global_pastor,
+        "must_change_password": bool(user.must_change_password),
+        "phone": user.phone
+    }
+
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": user
+        "user": user_dict,
+        "must_change_password": bool(user.must_change_password)
+    }
+
+@router.post("/change-password")
+def change_password(data: schemas.ChangePasswordRequest, db: Session = Depends(get_db)):
+    """
+    Cambio obligatorio o voluntario de contraseña.
+    Hashea la nueva contraseña con bcrypt y la persiste en PostgreSQL,
+    desactivando el flag 'must_change_password'.
+    """
+    user = db.query(models.User).filter(models.User.id == data.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres.")
+
+    # Hashear y actualizar en la base de datos
+    user.hashed_password = security.get_password_hash(data.new_password)
+    user.must_change_password = False
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Contraseña actualizada exitosamente en la base de datos.",
+        "must_change_password": False
+    }
+
+@router.post("/request-reset")
+def request_password_reset(data: schemas.PasswordResetCreate, db: Session = Depends(get_db)):
+    """
+    El usuario solicita recuperación de contraseña desde la pantalla de login.
+    Se crea una solicitud pendiente en la base de datos para aprobación de los Superadministradores.
+    """
+    clean_id = data.identifier.strip().lower()
+
+    # Intentar vincular con el usuario si existe
+    user = db.query(models.User).filter(
+        or_(
+            models.User.email.ilike(clean_id),
+            models.User.username.ilike(clean_id)
+        )
+    ).first()
+
+    reset_req = models.PasswordResetRequest(
+        user_id=user.id if user else None,
+        identifier=data.identifier.strip(),
+        full_name=user.full_name if user else data.full_name,
+        phone=data.phone or (user.phone if user else None),
+        sede_id=user.sede if user else data.sede_id,
+        status="PENDIENTE"
+    )
+
+    db.add(reset_req)
+    db.commit()
+    db.refresh(reset_req)
+
+    return {
+        "success": True,
+        "request_id": reset_req.id,
+        "message": "Tu solicitud ha sido enviada a los Superadministradores. Una vez aprobada, recibirás tus credenciales temporales."
+    }
+
+@router.get("/reset-requests", response_model=List[schemas.PasswordResetResponse])
+def get_pending_reset_requests(db: Session = Depends(get_db)):
+    """
+    Listar solicitudes de recuperación de contraseña para los Superadministradores.
+    """
+    return db.query(models.PasswordResetRequest).order_by(models.PasswordResetRequest.created_at.desc()).all()
+
+@router.post("/reset-requests/{request_id}/approve")
+def approve_password_reset(request_id: int, approval: schemas.PasswordResetApproval, db: Session = Depends(get_db)):
+    """
+    El Superadmin aprueba la solicitud: asigna clave temporal (ej: '123')
+    y marca al usuario con must_change_password = True para que la cambie al ingresar.
+    """
+    req = db.query(models.PasswordResetRequest).filter(models.PasswordResetRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada.")
+
+    req.status = approval.status
+    req.resolved_at = datetime.utcnow()
+    req.resolved_by = "Superadministrador"
+
+    if approval.status == "APROBADO":
+        temp_pass = approval.temporary_password or "123"
+        req.temporary_password = temp_pass
+
+        # Si hay usuario vinculado, actualizar su contraseña y marcar must_change_password
+        if req.user_id:
+            user = db.query(models.User).filter(models.User.id == req.user_id).first()
+            if user:
+                user.hashed_password = security.get_password_hash(temp_pass)
+                user.must_change_password = True
+
+    db.commit()
+
+    return {
+        "success": True,
+        "status": req.status,
+        "temporary_password": req.temporary_password,
+        "message": f"Solicitud marcada como {approval.status}."
     }

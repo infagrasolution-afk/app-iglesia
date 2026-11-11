@@ -48,6 +48,25 @@ export function AuthProvider({ children }) {
     localStorage.setItem('currentSede', sedeId);
   };
 
+  const [mustChangePassword, setMustChangePassword] = useState(() => {
+    try {
+      const saved = localStorage.getItem('user');
+      return saved ? Boolean(JSON.parse(saved).must_change_password) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  const changePassword = async (newPassword) => {
+    if (!user?.id) throw new Error("No hay usuario autenticado.");
+    const res = await authAPI.changePassword(user.id, newPassword);
+    const updatedUser = { ...user, must_change_password: false };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+    setMustChangePassword(false);
+    return res;
+  };
+
   const login = async (email, password, selectedSede = null) => {
     const normalizedKey = (email || '').toLowerCase().trim();
 
@@ -63,21 +82,25 @@ export function AuthProvider({ children }) {
     try {
       const data = await authAPI.login({ email, password });
       const authToken = data.access_token;
+      const requiresChange = Boolean(data.must_change_password || data.user?.must_change_password);
       const authUser = {
         ...data.user,
-        sede: assignedSede
+        sede: data.user.sede || assignedSede,
+        must_change_password: requiresChange
       };
 
       localStorage.setItem('token', authToken);
       localStorage.setItem('user', JSON.stringify(authUser));
-      localStorage.setItem('currentSede', assignedSede);
+      localStorage.setItem('currentSede', authUser.sede || assignedSede);
 
       setToken(authToken);
       setUser(authUser);
       setRoleState(authUser.role || 'MIEMBRO');
-      setCurrentSedeState(assignedSede);
-      return { success: true, user: authUser };
+      setCurrentSedeState(authUser.sede || assignedSede);
+      setMustChangePassword(requiresChange);
+      return { success: true, user: authUser, must_change_password: requiresChange };
     } catch (error) {
+
       // Default / offline credentials check
       const defaultUsers = {
         // 1. SUPER ADMIN: DUEÑO DE LA APP (L. INFANTE)
@@ -364,8 +387,11 @@ export function AuthProvider({ children }) {
         logout,
         demoLogin,
         setRole: switchRole,
-        assignSedeAdmin: handleAssignAdmin
+        assignSedeAdmin: handleAssignAdmin,
+        mustChangePassword,
+        changePassword
       }}
+
     >
       {children}
     </AuthContext.Provider>

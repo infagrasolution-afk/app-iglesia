@@ -21,7 +21,28 @@ class User(Base):
     phone = Column(String(50), nullable=True)
     permissions = Column(Text, nullable=True)                    # JSON string de permisos
     is_active = Column(Boolean, default=True)
+    must_change_password = Column(Boolean, default=False)        # Obliga a cambiar clave en 1er login
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class PasswordResetRequest(Base):
+    """
+    Solicitudes de recuperación de contraseña gestionadas y aprobadas por los Superadministradores.
+    """
+    __tablename__ = "password_resets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    identifier = Column(String(255), nullable=False)             # Username o Email
+    full_name = Column(String(255), nullable=True)
+    phone = Column(String(50), nullable=True)
+    sede_id = Column(String(50), nullable=True)
+    status = Column(String(50), default="PENDIENTE")             # PENDIENTE, APROBADO, RECHAZADO
+    temporary_password = Column(String(255), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_by = Column(String(255), nullable=True)
+
 
 class Sede(Base):
     """

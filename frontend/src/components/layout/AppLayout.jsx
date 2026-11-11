@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -22,7 +22,20 @@ import {
   Divider,
   useMediaQuery,
   useTheme,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  Badge,
+  Alert,
+  Snackbar,
+  Stack,
+  Card,
+  CardContent,
+  InputAdornment
 } from '@mui/material';
 import {
   VolunteerActivism as PrayerIcon,
@@ -40,10 +53,16 @@ import {
   Info as InfoIcon,
   Public as GlobalIcon,
   People as PeopleIcon,
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  LockReset as LockResetIcon,
+  Key as KeyIcon,
+  CheckCircle as CheckCircleIcon,
+  Visibility,
+  VisibilityOff
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { SEDES_LIST, ALL_SEDES_OPTION, CHURCH_INFO } from '../../data/sedesData';
+import { authAPI } from '../../services/api';
 
 const DRAWER_WIDTH = 260;
 
@@ -65,37 +84,96 @@ export default function AppLayout({ children }) {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, currentRole, setRole, logout, currentSede, setCurrentSede, activeSedeDetails, isAdmin } = useAuth();
+  const {
+    user,
+    currentRole,
+    setRole,
+    logout,
+    currentSede,
+    setCurrentSede,
+    activeSedeDetails,
+    isAdmin,
+    canManageAllSedes,
+    mustChangePassword,
+    changePassword
+  } = useAuth();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [roleAnchorEl, setRoleAnchorEl] = useState(null);
   const [sedeAnchorEl, setSedeAnchorEl] = useState(null);
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
+  // Mandatory Change Password State
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [passError, setPassError] = useState('');
+  const [savingPass, setSavingPass] = useState(false);
+  const [passSuccessMsg, setPassSuccessMsg] = useState('');
 
-  const handleRoleMenuOpen = (event) => {
-    setRoleAnchorEl(event.currentTarget);
-  };
+  // Superadmin Password Reset Approval State
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetRequests, setResetRequests] = useState([]);
+  const [loadingResets, setLoadingResets] = useState(false);
+  const [resolvingId, setResolvingId] = useState(null);
 
-  const handleRoleMenuClose = (newRole) => {
-    if (newRole) setRole(newRole);
-    setRoleAnchorEl(null);
-  };
-
-  const handleSedeMenuOpen = (event) => {
-    if (isAdmin) {
-      setSedeAnchorEl(event.currentTarget);
-    } else {
-      navigate('/sedes');
+  const loadResetRequests = async () => {
+    if (!canManageAllSedes) return;
+    setLoadingResets(true);
+    try {
+      const data = await authAPI.getResetRequests();
+      setResetRequests(Array.isArray(data) ? data : []);
+    } catch {
+      setResetRequests([]);
+    } finally {
+      setLoadingResets(false);
     }
   };
 
-  const handleSedeMenuClose = (newSedeId) => {
-    if (newSedeId) setCurrentSede(newSedeId);
-    setSedeAnchorEl(null);
+  useEffect(() => {
+    if (canManageAllSedes) {
+      loadResetRequests();
+    }
+  }, [canManageAllSedes]);
+
+  const handleApproveReset = async (requestId, approved = true) => {
+    setResolvingId(requestId);
+    try {
+      await authAPI.approveResetRequest(requestId, approved ? 'APROBADO' : 'RECHAZADO', '123');
+      await loadResetRequests();
+      setPassSuccessMsg(approved ? 'Solicitud aprobada con clave temporal "123".' : 'Solicitud rechazada.');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setResolvingId(null);
+    }
   };
+
+  const handleSaveNewPassword = async (e) => {
+    e.preventDefault();
+    setPassError('');
+
+    if (newPassword.length < 6) {
+      setPassError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPassError('Las contraseñas no coinciden. Por favor verifica.');
+      return;
+    }
+
+    setSavingPass(true);
+    try {
+      await changePassword(newPassword);
+      setPassSuccessMsg('¡Contraseña cambiada y encriptada exitosamente en la base de datos!');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setPassError(err.message || 'Error al actualizar la contraseña.');
+    } finally {
+      setSavingPass(false);
+    }
+  };
+
 
   // Find active nav tab index for bottom navigation
   const bottomNavItems = NAV_ITEMS.slice(0, 5);
@@ -339,6 +417,32 @@ export default function AppLayout({ children }) {
               </Menu>
             )}
 
+            {/* Superadmin Password Reset Requests Button */}
+            {canManageAllSedes && (
+              <Tooltip title="Solicitudes de Recuperación de Claves (Superadmin)">
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    loadResetRequests();
+                    setResetModalOpen(true);
+                  }}
+                  sx={{
+                    color: '#FFFFFF',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
+                  }}
+                >
+                  <Badge
+                    badgeContent={resetRequests.filter((r) => r.status === 'PENDIENTE').length}
+                    color="warning"
+                  >
+                    <LockResetIcon fontSize="small" sx={{ color: '#FCD34D' }} />
+                  </Badge>
+                </IconButton>
+              </Tooltip>
+            )}
+
             {/* Role Menu Trigger */}
             <Tooltip title="Cambiar Rol de Usuario">
               <Chip
@@ -350,6 +454,7 @@ export default function AppLayout({ children }) {
                   color: '#FFFFFF',
                   borderColor: 'rgba(255, 255, 255, 0.25)',
                   cursor: 'pointer',
+
                   fontWeight: 600,
                   fontSize: '0.78rem',
                   '&:hover': {
@@ -490,6 +595,224 @@ export default function AppLayout({ children }) {
           </BottomNavigation>
         </Paper>
       )}
+
+      {/* MODAL OBLIGATORIO: CAMBIO DE CONTRASEÑA EN EL PRIMER INGRESO */}
+      <Dialog
+        open={Boolean(mustChangePassword)}
+        disableEscapeKeyDown
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '24px',
+            p: 1,
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.45)',
+            border: '2px solid #F59E0B'
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: 1.2 }}>
+          <KeyIcon sx={{ color: '#F59E0B', fontSize: 28 }} />
+          Cambio Obligatorio de Contraseña
+        </DialogTitle>
+        <form onSubmit={handleSaveNewPassword}>
+          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ p: 2, borderRadius: '16px', backgroundColor: '#FEF3C7', border: '1px solid #FCD34D' }}>
+              <Typography sx={{ color: '#92400E', fontWeight: 700, fontSize: '0.86rem' }}>
+                ¡Bienvenido(a), {user?.full_name || user?.name || 'Hermano(a)'}!
+              </Typography>
+              <Typography sx={{ color: '#B45309', fontSize: '0.8rem', mt: 0.4, lineHeight: 1.5 }}>
+                Por motivos de seguridad de tu cuenta ministerial y de la congregación, debes definir tu propia contraseña privada antes de continuar.
+              </Typography>
+            </Box>
+
+            {passError && (
+              <Alert severity="error" sx={{ borderRadius: '12px', fontSize: '0.84rem' }}>
+                {passError}
+              </Alert>
+            )}
+
+            <TextField
+              required
+              fullWidth
+              size="small"
+              type={showNewPass ? 'text' : 'password'}
+              label="Nueva Contraseña Privada *"
+              placeholder="Mínimo 6 caracteres"
+              value={newPassword}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                setPassError('');
+              }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setShowNewPass(!showNewPass)}>
+                      {showNewPass ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
+
+            <TextField
+              required
+              fullWidth
+              size="small"
+              type={showNewPass ? 'text' : 'password'}
+              label="Confirmar Nueva Contraseña *"
+              placeholder="Repite la contraseña"
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setPassError('');
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2.5 }}>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              disabled={savingPass || !newPassword || !confirmPassword}
+              sx={{
+                borderRadius: '50px',
+                py: 1.2,
+                fontWeight: 800,
+                backgroundColor: '#0F172A',
+                '&:hover': { backgroundColor: '#1E293B' }
+              }}
+            >
+              {savingPass ? 'Guardando en la Base de Datos...' : '🔐 Guardar y Proteger mi Cuenta'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* MODAL: PANEL DE SOLICITUDES DE CONTRASEÑA PARA SUPERADMINS */}
+      <Dialog
+        open={resetModalOpen}
+        onClose={() => setResetModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: '22px', p: 1 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: 1.2 }}>
+          <LockResetIcon sx={{ color: '#F59E0B' }} />
+          Solicitudes de Recuperación de Contraseñas
+        </DialogTitle>
+        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: '65vh', overflowY: 'auto' }}>
+          <Box sx={{ p: 1.8, borderRadius: '14px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+            <Typography sx={{ color: '#1E40AF', fontSize: '0.84rem', fontWeight: 700 }}>
+              Panel de Verificación de Superadmins
+            </Typography>
+            <Typography sx={{ color: '#3B82F6', fontSize: '0.78rem', mt: 0.3 }}>
+              Al aprobar una solicitud, se restablecerá la contraseña temporal a <strong>123</strong> y al usuario se le exigirá obligatoriamente cambiarla en cuanto ingrese.
+            </Typography>
+          </Box>
+
+          {loadingResets ? (
+            <Typography sx={{ textAlign: 'center', py: 3, color: '#64748B' }}>Cargando solicitudes desde Neon...</Typography>
+          ) : resetRequests.length === 0 ? (
+            <Card sx={{ p: 4, textAlign: 'center', borderRadius: '16px', border: '1px dashed #CBD5E1' }}>
+              <CheckCircleIcon sx={{ fontSize: 48, color: '#10B981', mb: 1 }} />
+              <Typography variant="h6" sx={{ color: '#334155', fontWeight: 700 }}>
+                No hay solicitudes pendientes
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5 }}>
+                Todas las cuentas están activas y al día.
+              </Typography>
+            </Card>
+          ) : (
+            <Stack spacing={1.5}>
+              {resetRequests.map((req) => (
+                <Card
+                  key={req.id}
+                  sx={{
+                    borderRadius: '16px',
+                    border: req.status === 'PENDIENTE' ? '1px solid #F59E0B' : '1px solid #E2E8F0',
+                    backgroundColor: req.status === 'PENDIENTE' ? '#FFFBEB' : '#FFFFFF',
+                    p: 2
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, flexWrap: 'wrap', gap: 1 }}>
+                    <Box>
+                      <Typography sx={{ fontWeight: 800, color: '#0F172A', fontSize: '0.96rem' }}>
+                        {req.full_name || req.identifier}
+                      </Typography>
+                      <Typography sx={{ color: '#64748B', fontSize: '0.8rem' }}>
+                        Usuario / Correo: <strong>{req.identifier}</strong>
+                      </Typography>
+                      {req.phone && (
+                        <Typography sx={{ color: '#059669', fontSize: '0.78rem', fontWeight: 600 }}>
+                          📱 WhatsApp: {req.phone}
+                        </Typography>
+                      )}
+                      {req.sede_id && (
+                        <Chip label={`Sede: ${req.sede_id}`} size="small" sx={{ mt: 0.6, fontSize: '0.72rem', fontWeight: 700 }} />
+                      )}
+                    </Box>
+                    <Chip
+                      label={req.status}
+                      color={req.status === 'APROBADO' ? 'success' : req.status === 'PENDIENTE' ? 'warning' : 'default'}
+                      size="small"
+                      sx={{ fontWeight: 800 }}
+                    />
+                  </Box>
+
+                  {req.status === 'PENDIENTE' && (
+                    <Box sx={{ display: 'flex', gap: 1, mt: 1.5, justifyContent: 'flex-end' }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        disabled={resolvingId === req.id}
+                        onClick={() => handleApproveReset(req.id, false)}
+                        sx={{ borderRadius: '50px', textTransform: 'none', fontWeight: 700 }}
+                      >
+                        Rechazar
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        disabled={resolvingId === req.id}
+                        onClick={() => handleApproveReset(req.id, true)}
+                        sx={{
+                          borderRadius: '50px',
+                          textTransform: 'none',
+                          fontWeight: 700,
+                          backgroundColor: '#10B981',
+                          '&:hover': { backgroundColor: '#059669' }
+                        }}
+                      >
+                        {resolvingId === req.id ? 'Aprobando...' : '✓ Aprobar (Clave temporal 123)'}
+                      </Button>
+                    </Box>
+                  )}
+                </Card>
+              ))}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setResetModalOpen(false)} variant="outlined" sx={{ borderRadius: '50px' }}>
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Global Success Notification */}
+      <Snackbar
+        open={Boolean(passSuccessMsg)}
+        autoHideDuration={4000}
+        onClose={() => setPassSuccessMsg('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" sx={{ width: '100%', borderRadius: '12px' }}>
+          {passSuccessMsg}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
+

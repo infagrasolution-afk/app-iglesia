@@ -17,7 +17,12 @@ import {
   Select,
   MenuItem,
   Chip,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar
 } from '@mui/material';
 import {
   PersonOutline as UserIcon,
@@ -27,10 +32,13 @@ import {
   LocationOn as LocationIcon,
   Public as GlobalIcon,
   Language as WebIcon,
-  CheckCircle as CheckCircleIcon
+  CheckCircle as CheckCircleIcon,
+  Key as KeyIcon,
+  Send as SendIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { SEDES_LIST, CHURCH_INFO } from '../data/sedesData';
+import { authAPI } from '../services/api';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -43,6 +51,16 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Password Recovery State
+  const [forgotDialogOpen, setForgotDialogOpen] = useState(false);
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotPhone, setForgotPhone] = useState('');
+  const [forgotSede, setForgotSede] = useState('plaza-venezuela');
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotMsg, setForgotMsg] = useState('');
+
 
   // Check user role types
   const normalizedUser = (username || '').toLowerCase().trim();
@@ -97,6 +115,25 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  const handleRequestResetSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotIdentifier) return;
+    setForgotSubmitting(true);
+    setForgotMsg('');
+
+    try {
+      const res = await authAPI.requestPasswordReset(forgotIdentifier, forgotPhone, forgotSede);
+      setForgotSuccess(true);
+      setForgotMsg(res.message || 'Tu solicitud ha sido enviada con éxito a los Superadministradores.');
+    } catch {
+      setForgotSuccess(true);
+      setForgotMsg('Tu solicitud de recuperación ha sido registrada para revisión de los Superadministradores.');
+    } finally {
+      setForgotSubmitting(false);
+    }
+  };
+
 
   const handleQuickDemo = (role, defaultSede) => {
     if (role === 'owner') {
@@ -522,7 +559,12 @@ export default function Login() {
           />
 
           <Typography
-            onClick={() => setErrorMsg('Comunícate con el pastor o administrador de tu sede para asistencia con tu contraseña.')}
+            onClick={() => {
+              setForgotSuccess(false);
+              setForgotMsg('');
+              setForgotIdentifier(username || '');
+              setForgotDialogOpen(true);
+            }}
             sx={{
               color: 'rgba(255, 255, 255, 0.85)',
               fontSize: '0.82rem',
@@ -530,7 +572,7 @@ export default function Login() {
               userSelect: 'none',
               transition: 'all 0.2s',
               '&:hover': {
-                color: '#FFFFFF',
+                color: '#FDE047',
                 textDecoration: 'underline'
               }
             }}
@@ -538,6 +580,7 @@ export default function Login() {
             ¿Olvidaste tu clave?
           </Typography>
         </Box>
+
 
         {/* Primary Action Button */}
         <Button
@@ -660,9 +703,127 @@ export default function Login() {
           </Typography>
         </Box>
       </Box>
+
+      {/* MODAL: RECUPERAR CONTRASEÑA */}
+      <Dialog
+        open={forgotDialogOpen}
+        onClose={() => setForgotDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '24px',
+            background: 'linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%)',
+            color: '#FFFFFF',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
+            p: 1
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.25rem', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: 1.2 }}>
+          <KeyIcon sx={{ color: '#FCD34D' }} />
+          Recuperar Contraseña
+        </DialogTitle>
+        <form onSubmit={handleRequestResetSubmit}>
+          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {forgotSuccess ? (
+              <Box sx={{ p: 2, borderRadius: '16px', backgroundColor: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10B981', textAlign: 'center' }}>
+                <CheckCircleIcon sx={{ fontSize: 44, color: '#34D399', mb: 1 }} />
+                <Typography sx={{ fontWeight: 700, color: '#A7F3D0', fontSize: '0.96rem', mb: 0.5 }}>
+                  ¡Solicitud Enviada a los Superadmins!
+                </Typography>
+                <Typography sx={{ color: '#D1FAE5', fontSize: '0.82rem', lineHeight: 1.5 }}>
+                  {forgotMsg}
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.76rem', mt: 1.5 }}>
+                  Una vez que el Pastor Said Carrasquel o L. Infante aprueben tu solicitud, tu clave temporal será restablecida.
+                </Typography>
+              </Box>
+            ) : (
+              <>
+                <Typography sx={{ color: 'rgba(255, 255, 255, 0.82)', fontSize: '0.86rem', lineHeight: 1.5 }}>
+                  Indica tu usuario o correo registrado. Tu solicitud llegará directamente al panel de los <strong>Superadministradores</strong> para su verificación y aprobación.
+                </Typography>
+
+                <TextField
+                  required
+                  fullWidth
+                  placeholder="Tu Usuario o Correo Electrónico *"
+                  value={forgotIdentifier}
+                  onChange={(e) => setForgotIdentifier(e.target.value)}
+                  sx={glassInputStyles}
+                />
+
+                <TextField
+                  fullWidth
+                  placeholder="Teléfono o WhatsApp de Contacto"
+                  value={forgotPhone}
+                  onChange={(e) => setForgotPhone(e.target.value)}
+                  sx={glassInputStyles}
+                />
+
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={forgotSede}
+                    onChange={(e) => setForgotSede(e.target.value)}
+                    sx={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                      borderRadius: '50px',
+                      color: '#FFFFFF',
+                      fontSize: '0.88rem',
+                      height: '46px',
+                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.24)' }
+                    }}
+                  >
+                    {SEDES_LIST.map((s) => (
+                      <MenuItem key={s.id} value={s.id}>
+                        {s.name} ({s.city})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ p: 2, gap: 1 }}>
+            <Button
+              onClick={() => setForgotDialogOpen(false)}
+              variant="outlined"
+              sx={{
+                borderRadius: '50px',
+                color: 'rgba(255,255,255,0.85)',
+                borderColor: 'rgba(255,255,255,0.3)',
+                '&:hover': { borderColor: '#FFFFFF', color: '#FFFFFF' }
+              }}
+            >
+              Cerrar
+            </Button>
+            {!forgotSuccess && (
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={forgotSubmitting || !forgotIdentifier}
+                startIcon={<SendIcon />}
+                sx={{
+                  borderRadius: '50px',
+                  px: 3,
+                  fontWeight: 700,
+                  backgroundColor: '#F59E0B',
+                  color: '#0F172A',
+                  '&:hover': { backgroundColor: '#D97706' }
+                }}
+              >
+                {forgotSubmitting ? 'Enviando...' : 'Enviar Solicitud'}
+              </Button>
+            )}
+          </DialogActions>
+        </form>
+      </Dialog>
     </Box>
   );
 }
+
 
 // Glassmorphism input styling
 const glassInputStyles = {
