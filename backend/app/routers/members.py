@@ -5,9 +5,29 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 import json
 import os
+import urllib.parse
+import re
 
 from app import models, security
 from app.database import get_db
+
+def clean_venezuela_phone(phone_str: str) -> str:
+    """Formatea el número telefónico para WhatsApp internacional (código 58 para Venezuela)"""
+    if not phone_str:
+        return ""
+    digits = re.sub(r"\D", "", phone_str)
+    if not digits:
+        return ""
+    # Si comienza con 0 y tiene 11 dígitos (ej: 04120161906 -> 584120161906)
+    if digits.startswith("0") and len(digits) == 11:
+        return "58" + digits[1:]
+    # Si tiene 10 dígitos y comienza con 4 (ej: 4120161906)
+    if len(digits) == 10 and digits.startswith("4"):
+        return "58" + digits
+    # Si ya empieza con 58
+    if digits.startswith("58"):
+        return digits
+    return digits
 
 router = APIRouter(prefix="/api/members", tags=["Members"])
 
@@ -100,29 +120,52 @@ def add_member(req: MemberCreate, db: Session = Depends(get_db)):
         )
         db.add(new_db_member)
 
-        # Si se crea como usuario de acceso o es líder/pastor/admin
-        if req.create_access_user or req.role in ["LIDER", "SERVIDOR", "ADMIN_SEDE"]:
-            username = req.access_username or req.full_name.lower().replace(" ", "").replace(".", "")[:15]
-            existing_user = db.query(models.User).filter(
-                (models.User.email == final_email) | (models.User.username == username)
-            ).first()
+        # Crear SIEMPRE cuenta de usuario en Neon para todo nuevo miembro (cualquier rol)
+        initial_password = req.initial_password or "123"
+        clean_name = "".join([c for c in req.full_name.lower().replace(" ", "").replace(".", "") if c.isalnum()])[:14]
+        base_username = req.access_username or clean_name or f"user{int(datetime.utcnow().timestamp())}"
+        
+        # Garantizar que el username no colisione
+        username = base_username
+        existing_user = db.query(models.User).filter(
+            (models.User.email == final_email) | (models.User.username == username)
+        ).first()
 
-            if not existing_user:
-                hashed = security.get_password_hash(req.initial_password or "123")
-                new_user = models.User(
-                    username=username,
-                    email=final_email,
-                    full_name=req.full_name,
-                    hashed_password=hashed,
-                    role=req.role or "MIEMBRO",
-                    sede=req.sede_id,
-                    phone=req.phone,
-                    must_change_password=True # ¡Obliga a cambiar clave en primer inicio de sesión!
-                )
-                db.add(new_user)
+        if existing_user:
+            username = existing_user.username
+        else:
+            hashed = security.get_password_hash(initial_password)
+            new_user = models.User(
+                username=username,
+                email=final_email,
+                full_name=req.full_name,
+                hashed_password=hashed,
+                role=req.role or "MIEMBRO",
+                sede=req.sede_id,
+                phone=req.phone,
+                must_change_password=True # ¡Obliga a cambiar clave en primer inicio de sesión!
+            )
+            db.add(new_user)
 
         db.commit()
         db.refresh(new_db_member)
+
+        # Preparar mensaje de bienvenida por WhatsApp con remitente L. Infante (04120161906)
+        clean_phone = clean_venezuela_phone(req.phone or "")
+        whatsapp_message = (
+            f"¡Hola, {req.full_name}! 🕊️\n\n"
+            f"Te damos una bendecida bienvenida a la familia de la Iglesia Cristiana Restauración ({final_sede_name}).\n\n"
+            f"Hemos activado tu cuenta de acceso a la plataforma del sistema con las siguientes credenciales:\n"
+            f"👤 Usuario: {username}\n"
+            f"📧 Correo: {final_email}\n"
+            f"🔑 Contraseña temporal: {initial_password}\n\n"
+            f"⚠️ Nota de seguridad: Al iniciar sesión por primera vez, el sistema te solicitará obligatoriamente cambiar tu contraseña por una personalizada.\n\n"
+            f"Atentamente,\n"
+            f"Luis Infante (linfante)\n"
+            f"Superadministrador / Sistemas\n"
+            f"📲 WhatsApp remitente: 04120161906"
+        )
+        whatsapp_url = f"https://wa.me/{clean_phone}?text={urllib.parse.quote(whatsapp_message)}" if clean_phone else ""
 
         member_dict = {
             "id": new_db_member.id,
@@ -138,7 +181,23 @@ def add_member(req: MemberCreate, db: Session = Depends(get_db)):
             "joined_at": new_db_member.joined_at,
             "created_by": new_db_member.created_by
         }
-        return {"success": True, "member": member_dict}
+        return {
+            "success": True,
+            "member": member_dict,
+            "credentials": {
+                "username": username,
+                "email": final_email,
+                "initial_password": initial_password,
+                "must_change_password": True
+            },
+            "whatsapp": {
+                "phone": clean_phone,
+                "message": whatsapp_message,
+                "url": whatsapp_url,
+                "sender_name": "Luis Infante (linfante)",
+                "sender_phone": "04120161906"
+            }
+        }
 
     except Exception as e:
         db.rollback()

@@ -43,7 +43,9 @@ import {
   Close as CloseIcon,
   WhatsApp as WhatsAppIcon,
   FilterList as FilterIcon,
-  VerifiedUser as VerifiedIcon
+  VerifiedUser as VerifiedIcon,
+  ContentCopy as CopyIcon,
+  Key as KeyIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { SEDES_LIST } from '../data/sedesData';
@@ -67,6 +69,10 @@ export default function Members() {
   const [openModal, setOpenModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  // Modal State for Welcome / WhatsApp notification
+  const [welcomeModalData, setWelcomeModalData] = useState(null);
+  const [copiedMessage, setCopiedMessage] = useState(false);
 
   // Form State
   const defaultFormSede = canManageAllSedes 
@@ -175,6 +181,29 @@ export default function Members() {
         setOpenModal(false);
         // Refresh list
         await loadMembersData();
+
+        // Levantar Modal de Bienvenida con Credenciales y Envío por WhatsApp
+        const cleanPhone = (payload.phone || '').replace(/\D/g, '');
+        const formattedPhone = cleanPhone.startsWith('0') && cleanPhone.length === 11 
+          ? '58' + cleanPhone.slice(1) 
+          : cleanPhone;
+
+        const defaultMsg = `¡Hola, ${payload.full_name}! 🕊️\n\nTe damos una bendecida bienvenida a la familia de la Iglesia Cristiana Restauración (${payload.sede_name}).\n\nHemos activado tu cuenta de acceso a la plataforma con las siguientes credenciales:\n👤 Usuario: ${result.credentials?.username || payload.full_name.toLowerCase().replace(/\\s+/g, '')}\n📧 Correo: ${payload.email}\n🔑 Contraseña temporal: ${result.credentials?.initial_password || '123'}\n\n⚠️ Nota de seguridad: Al iniciar sesión por primera vez, el sistema te solicitará obligatoriamente cambiar tu contraseña.\n\nAtentamente,\nLuis Infante (linfante)\nSuperadministrador / Sistemas\n📲 WhatsApp remitente: 04120161906`;
+
+        setWelcomeModalData({
+          member: result.member || payload,
+          credentials: result.credentials || {
+            username: payload.full_name.toLowerCase().replace(/\s+/g, ''),
+            initial_password: '123'
+          },
+          whatsapp: result.whatsapp || {
+            phone: formattedPhone,
+            message: defaultMsg,
+            url: formattedPhone ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(defaultMsg)}` : '',
+            sender_name: 'Luis Infante (linfante)',
+            sender_phone: '04120161906'
+          }
+        });
       }
     } catch (err) {
       setSnackbar({
@@ -852,6 +881,148 @@ export default function Members() {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* MODAL DE BIENVENIDA Y ENVÍO DE CREDENCIALES POR WHATSAPP */}
+      <Dialog
+        open={Boolean(welcomeModalData)}
+        onClose={() => setWelcomeModalData(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '24px',
+            p: 1,
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.45)',
+            border: '2px solid #10B981'
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <WhatsAppIcon sx={{ color: '#10B981', fontSize: 32 }} />
+          Bienvenida y Envío de Credenciales
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ p: 2, borderRadius: '16px', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0' }}>
+            <Typography sx={{ color: '#065F46', fontWeight: 800, fontSize: '0.98rem' }}>
+              ✓ Miembro registrado y guardado en Neon PostgreSQL
+            </Typography>
+            <Typography sx={{ color: '#047857', fontSize: '0.82rem', mt: 0.5 }}>
+              Su cuenta de acceso está activa. Envíale su mensaje de bienvenida y credenciales directamente a su WhatsApp.
+            </Typography>
+          </Box>
+
+          {/* Tarjeta de Credenciales Creadas */}
+          <Card elevation={0} sx={{ p: 2, borderRadius: '16px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '0.78rem', color: '#64748B', mb: 1, textTransform: 'uppercase' }}>
+              Credenciales de Acceso
+            </Typography>
+            <Grid container spacing={1.5}>
+              <Grid item xs={12} sm={6}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>Nombre completo:</Typography>
+                <Typography sx={{ fontWeight: 700, color: '#0F172A' }}>{welcomeModalData?.member?.full_name}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>Rol asignado:</Typography>
+                <Chip label={welcomeModalData?.member?.role || 'MIEMBRO'} size="small" color="primary" sx={{ fontWeight: 700 }} />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>Usuario de inicio:</Typography>
+                <Typography sx={{ fontWeight: 800, color: '#1E293B' }}>{welcomeModalData?.credentials?.username}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>Contraseña temporal:</Typography>
+                <Typography sx={{ fontWeight: 800, color: '#DC2626' }}>{welcomeModalData?.credentials?.initial_password || '123'}</Typography>
+              </Grid>
+            </Grid>
+            <Alert severity="warning" sx={{ mt: 1.5, borderRadius: '10px', fontSize: '0.78rem' }}>
+              🔒 El usuario deberá cambiar su contraseña obligatoriamente al iniciar sesión por primera vez.
+            </Alert>
+          </Card>
+
+          {/* Tarjeta de Remitente Configurado */}
+          <Box sx={{ p: 1.5, borderRadius: '12px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+            <Box>
+              <Typography sx={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
+                Remitente del mensaje:
+              </Typography>
+              <Typography sx={{ fontSize: '0.86rem', color: '#0F172A', fontWeight: 800 }}>
+                Luis Infante (linfante) — Superadmin
+              </Typography>
+            </Box>
+            <Chip label="📱 04120161906" size="small" sx={{ fontWeight: 800, backgroundColor: '#0F172A', color: '#FFFFFF' }} />
+          </Box>
+
+          {/* Vista previa del mensaje */}
+          <Box>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', mb: 0.8 }}>
+              Mensaje preparado para WhatsApp:
+            </Typography>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                borderRadius: '14px',
+                backgroundColor: '#FFFFFF',
+                fontFamily: 'monospace',
+                fontSize: '0.78rem',
+                whiteSpace: 'pre-wrap',
+                maxHeight: '160px',
+                overflowY: 'auto',
+                color: '#334155'
+              }}
+            >
+              {welcomeModalData?.whatsapp?.message}
+            </Paper>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<CopyIcon />}
+            onClick={() => {
+              navigator.clipboard.writeText(welcomeModalData?.whatsapp?.message || '');
+              setCopiedMessage(true);
+              setTimeout(() => setCopiedMessage(false), 2500);
+            }}
+            sx={{ borderRadius: '50px', textTransform: 'none', fontWeight: 700 }}
+          >
+            {copiedMessage ? '✓ Copiado al portapapeles' : 'Copiar Mensaje'}
+          </Button>
+
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              onClick={() => setWelcomeModalData(null)}
+              variant="text"
+              sx={{ borderRadius: '50px', textTransform: 'none', color: '#64748B' }}
+            >
+              Cerrar
+            </Button>
+            {welcomeModalData?.whatsapp?.url ? (
+              <Button
+                variant="contained"
+                startIcon={<WhatsAppIcon />}
+                onClick={() => {
+                  window.open(welcomeModalData.whatsapp.url, '_blank', 'noopener,noreferrer');
+                }}
+                sx={{
+                  borderRadius: '50px',
+                  backgroundColor: '#25D366',
+                  color: '#FFFFFF',
+                  fontWeight: 800,
+                  textTransform: 'none',
+                  px: 2.5,
+                  boxShadow: '0 4px 15px rgba(37, 211, 102, 0.4)',
+                  '&:hover': { backgroundColor: '#1EBE5D' }
+                }}
+              >
+                Enviar por WhatsApp
+              </Button>
+            ) : (
+              <Chip label="Sin teléfono" color="default" size="small" />
+            )}
+          </Box>
+        </DialogActions>
       </Dialog>
 
       {/* Snackbar notification */}
