@@ -7,14 +7,16 @@ url = os.getenv('DATABASE_URL')
 conn = psycopg2.connect(url)
 cur = conn.cursor()
 
-# Asegurar que la columna allowed_modules exista en members
+# Asegurar que la columna allowed_modules exista en members y limpiar registros demo
 try:
     cur.execute("ALTER TABLE members ADD COLUMN IF NOT EXISTS allowed_modules TEXT;")
+    cur.execute("DELETE FROM members;")
+    cur.execute("DELETE FROM users WHERE role NOT IN ('SUPER_ADMIN', 'ADMIN_SEDE');")
     conn.commit()
-    print("Columna 'allowed_modules' verificada en tabla 'members'.")
+    print("Tabla 'members' vaciada (0 miembros de prueba) y usuarios demo eliminados en Neon PostgreSQL.")
 except Exception as e:
     conn.rollback()
-    print(f"Aviso verificando columna allowed_modules: {e}")
+    print(f"Aviso limpiando miembros demo: {e}")
 
 tables_with_sequences = [
     ('members', 'members_id_seq'),
@@ -31,7 +33,7 @@ for table, seq in tables_with_sequences:
     try:
         cur.execute(f"SELECT COALESCE(MAX(id), 0) FROM {table};")
         max_id = cur.fetchone()[0]
-        cur.execute(f"SELECT setval('{seq}', %s, true);", (max_id if max_id > 0 else 1,))
+        cur.execute(f"SELECT setval('{seq}', %s, %s);", (max_id if max_id > 0 else 1, True if max_id > 0 else False))
         print(f"Secuencia '{seq}' fijada en {max_id}")
     except Exception as e:
         conn.rollback()
