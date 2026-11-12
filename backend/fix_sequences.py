@@ -11,6 +11,7 @@ cur = conn.cursor()
 try:
     cur.execute("ALTER TABLE members ADD COLUMN IF NOT EXISTS allowed_modules TEXT;")
     cur.execute("DELETE FROM members;")
+    cur.execute("DELETE FROM users WHERE username = 'saidcarrasquel';")
     cur.execute("DELETE FROM users WHERE role NOT IN ('SUPER_ADMIN', 'ADMIN_SEDE');")
     conn.commit()
     print("Tabla 'members' vaciada (0 miembros de prueba) y usuarios demo eliminados en Neon PostgreSQL.")

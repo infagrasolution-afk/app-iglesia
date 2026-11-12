@@ -8,9 +8,32 @@ import json
 import os
 import urllib.parse
 import re
+import unicodedata
 
 from app import models, security
 from app.database import get_db
+
+def generate_username_from_name(full_name: str) -> str:
+    """
+    Genera el usuario en formato: inicial del primer nombre + apellido.
+    Ejemplo: 'Said Carrasquel' -> 'scarrasquel', 'Luis Infante' -> 'linfante'.
+    """
+    if not full_name:
+        return ""
+    norm = unicodedata.normalize("NFKD", full_name).encode("ascii", "ignore").decode("ascii").lower()
+    words = [re.sub(r"[^a-z0-9]", "", w) for w in norm.split()]
+    titles = {"pastor", "pastora", "apostol", "profeta", "evangelista", "maestro", "ing", "dr", "dra", "lic", "hno", "hna", "hermano", "hermana"}
+    words = [w for w in words if w and w not in titles]
+    if not words:
+        return ""
+    if len(words) == 1:
+        return words[0][:16]
+    if len(words) == 2:
+        return (words[0][0] + words[1])[:18]
+    if len(words) == 3:
+        return (words[0][0] + words[2])[:18]
+    # 4 o más palabras (Nombre1 Nombre2 Apellido1 Apellido2) -> inicial Nombre1 + Apellido1
+    return (words[0][0] + words[2])[:18]
 
 ALL_APP_MODULES = [
     "prayers", "members", "discipleship", "emotions", "bible",
@@ -105,20 +128,28 @@ def get_members(sede_id: Optional[str] = Query(None), db: Session = Depends(get_
             query = query.filter(models.Member.sede_id == sede_id)
         db_members = query.order_by(models.Member.id.desc()).all()
 
-        # Mapear permisos de usuarios en caso de que algún miembro antiguo los tenga en users.permissions
+        # Mapear permisos y username de usuarios
+        all_users = db.query(models.User).all()
         users_by_email = {
             (u.email or "").lower(): u.permissions
-            for u in db.query(models.User).all()
+            for u in all_users
             if u.email
+        }
+        usernames_by_email = {
+            (u.email or "").lower(): u.username
+            for u in all_users
+            if u.email and u.username
         }
 
         result = []
         for m in db_members:
             user_perms = users_by_email.get((m.email or "").lower())
             modules_list = _parse_modules(m.allowed_modules or user_perms)
+            resolved_username = usernames_by_email.get((m.email or "").lower()) or generate_username_from_name(m.full_name)
             result.append({
                 "id": m.id,
                 "full_name": m.full_name,
+                "username": resolved_username,
                 "email": m.email,
                 "phone": m.phone,
                 "sede_id": m.sede_id,
@@ -215,7 +246,7 @@ def add_member(
 
         # Crear o actualizar cuenta de usuario en Neon con sus módulos permitidos y rol
         initial_password = req.initial_password or "123"
-        clean_name = "".join([c for c in req.full_name.lower().replace(" ", "").replace(".", "") if c.isalnum()])[:14]
+        clean_name = generate_username_from_name(req.full_name)
         base_username = (req.access_username or "").strip().lower() or clean_name or f"user{int(datetime.utcnow().timestamp())}"
 
         username = base_username
@@ -226,7 +257,8 @@ def add_member(
         user_sede_value = "TODAS" if requested_role == "SUPER_ADMIN" else req.sede_id
 
         if existing_user:
-            username = existing_user.username
+            username = (req.access_username or "").strip().lower() or clean_name or existing_user.username
+            existing_user.username = username
             existing_user.role = requested_role
             existing_user.sede = user_sede_value
             existing_user.permissions = modules_json
@@ -273,6 +305,7 @@ def add_member(
         member_dict = {
             "id": new_db_member.id,
             "full_name": new_db_member.full_name,
+            "username": username,
             "email": new_db_member.email,
             "phone": new_db_member.phone,
             "sede_id": new_db_member.sede_id,
