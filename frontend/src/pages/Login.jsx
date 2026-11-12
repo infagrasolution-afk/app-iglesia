@@ -498,78 +498,8 @@ export default function Login() {
         />
 
         {/* SEDE SELECTION SECTION */}
-        <Box sx={{ width: '100%', mt: 1.8, textAlign: 'left' }}>
-          {isOwnerUser ? (
-            /* Owner / Super Admin Notification */
-            <Box
-              sx={{
-                p: 1.4,
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.25) 0%, rgba(194, 65, 12, 0.15) 100%)',
-                border: '1.5px solid rgba(251, 146, 60, 0.6)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.2
-              }}
-            >
-              <GlobalIcon sx={{ color: '#FDBA74', fontSize: 26 }} />
-              <Box>
-                <Typography sx={{ color: '#FFEDD5', fontWeight: 800, fontSize: '0.84rem', lineHeight: 1.2 }}>
-                  👑 Dueño de la App / Super Admin (L. Infante)
-                </Typography>
-                <Typography sx={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.74rem' }}>
-                  Acceso supremo a <strong>todas las sedes</strong>, control total y asignación de administradores de sede.
-                </Typography>
-              </Box>
-            </Box>
-          ) : isGeneralAdmin ? (
-            /* General Admin Notification: Global Access */
-            <Box
-              sx={{
-                p: 1.4,
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.15) 100%)',
-                border: '1px solid rgba(245, 158, 11, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.2
-              }}
-            >
-              <GlobalIcon sx={{ color: '#FCD34D', fontSize: 26 }} />
-              <Box>
-                <Typography sx={{ color: '#FEF3C7', fontWeight: 700, fontSize: '0.82rem', lineHeight: 1.2 }}>
-                  🏛️ Pastor Principal / Admin General
-                </Typography>
-                <Typography sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.74rem' }}>
-                  El usuario admin tiene vista y control de <strong>todas las sedes</strong> nacionales.
-                </Typography>
-              </Box>
-            </Box>
-          ) : isSedeAdminUser ? (
-            /* Sede Admin Notification */
-            <Box
-              sx={{
-                p: 1.4,
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.15) 100%)',
-                border: '1px solid rgba(96, 165, 250, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.2
-              }}
-            >
-              <LocationIcon sx={{ color: '#93C5FD', fontSize: 26 }} />
-              <Box>
-                <Typography sx={{ color: '#EFF6FF', fontWeight: 700, fontSize: '0.82rem', lineHeight: 1.2 }}>
-                  🏢 Administrador de Sede Asignado
-                </Typography>
-                <Typography sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.74rem' }}>
-                  Administras localmente tu sede con autoridad pastoral y de discipulado.
-                </Typography>
-              </Box>
-            </Box>
-          ) : (
-            /* Non-Admin Requirement: Select Sede */
+        {!hasGlobalAccess && (
+          <Box sx={{ width: '100%', mt: 1.8, textAlign: 'left' }}>
             <Box>
               <Typography
                 sx={{
@@ -646,8 +576,8 @@ export default function Login() {
                 </Select>
               </FormControl>
             </Box>
-          )}
-        </Box>
+          </Box>
+        )}
 
         {/* Remember me & Forgot password Row */}
         <Box
