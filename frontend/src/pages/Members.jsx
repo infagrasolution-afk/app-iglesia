@@ -97,7 +97,9 @@ export default function Members() {
     ministry: 'Grupo de Conexión',
     baptism_status: 'Bautizado',
     discipleship_status: 'En formación',
-    allowed_modules: DEFAULT_MEMBER_MODULES
+    allowed_modules: DEFAULT_MEMBER_MODULES,
+    access_username: '',
+    initial_password: '123'
   });
 
   // Load members on mount and filter change
@@ -118,26 +120,31 @@ export default function Members() {
   };
 
   // Open modal handler
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = (presetRole = 'MIEMBRO') => {
     if (!canCreateMembers) {
       setSnackbar({ open: true, message: 'Acceso denegado: Solo los administradores de sede y los superadmins pueden registrar miembros.', severity: 'error' });
       return;
     }
 
-    const targetSede = canManageAllSedes 
-      ? (selectedSedeFilter !== 'TODAS' ? selectedSedeFilter : 'plaza-venezuela')
-      : (user?.sede || 'maracay');
+    const isSuperRole = presetRole === 'SUPER_ADMIN';
+    const targetSede = isSuperRole
+      ? 'TODAS'
+      : canManageAllSedes 
+        ? (selectedSedeFilter !== 'TODAS' ? selectedSedeFilter : 'plaza-venezuela')
+        : (user?.sede || 'maracay');
 
     setFormData({
       full_name: '',
       email: '',
       phone: '',
       sede_id: targetSede,
-      role: 'MIEMBRO',
-      ministry: 'Grupo de Conexión',
+      role: presetRole,
+      ministry: isSuperRole ? 'Dirección General / Superadmin' : 'Grupo de Conexión',
       baptism_status: 'Bautizado',
-      discipleship_status: 'En formación',
-      allowed_modules: DEFAULT_MEMBER_MODULES
+      discipleship_status: isSuperRole ? 'Graduado de Fundamentos' : 'En formación',
+      allowed_modules: isSuperRole || presetRole === 'ADMIN_SEDE' ? ALL_MODULE_KEYS : DEFAULT_MEMBER_MODULES,
+      access_username: '',
+      initial_password: '123'
     });
     setOpenModal(true);
   };
@@ -213,20 +220,27 @@ export default function Members() {
         : `${user?.name || user?.username || 'Admin'} (Admin Sede)`;
 
       const matchedSede = SEDES_LIST.find((s) => s.id === formData.sede_id);
+      const resolvedSedeName = formData.sede_id === 'TODAS'
+        ? 'Todas las Sedes (Nacional)'
+        : (matchedSede?.name || formData.sede_id);
 
       const payload = {
         full_name: formData.full_name.trim(),
         email: formData.email.trim() || `${formData.full_name.toLowerCase().replace(/\s+/g, '.')}@restauracion.org`,
         phone: formData.phone.trim() || 'No registrado',
-        sede_id: formData.sede_id,
-        sede_name: matchedSede?.name || formData.sede_id,
+        sede_id: formData.role === 'SUPER_ADMIN' ? 'TODAS' : formData.sede_id,
+        sede_name: formData.role === 'SUPER_ADMIN' ? 'Todas las Sedes (Nacional)' : resolvedSedeName,
         role: formData.role,
         ministry: formData.ministry,
         baptism_status: formData.baptism_status,
         discipleship_status: formData.discipleship_status,
         created_by: creatorName,
         creator_role: currentRole,
-        allowed_modules: formData.allowed_modules || DEFAULT_MEMBER_MODULES
+        allowed_modules: formData.role === 'SUPER_ADMIN' || formData.role === 'ADMIN_SEDE'
+          ? ALL_MODULE_KEYS
+          : (formData.allowed_modules || DEFAULT_MEMBER_MODULES),
+        access_username: (formData.access_username || '').trim() || undefined,
+        initial_password: (formData.initial_password || '').trim() || '123'
       };
 
       const result = await membersAPI.create(payload);
@@ -234,7 +248,9 @@ export default function Members() {
       if (result.success || result.id) {
         setSnackbar({
           open: true,
-          message: `¡Miembro ${payload.full_name} registrado con éxito en ${payload.sede_name}!`,
+          message: payload.role === 'SUPER_ADMIN'
+            ? `¡Superadministrador ${payload.full_name} creado con éxito con acceso nacional!`
+            : `¡Miembro ${payload.full_name} registrado con éxito en ${payload.sede_name}!`,
           severity: 'success'
         });
         setOpenModal(false);
@@ -379,30 +395,58 @@ export default function Members() {
               </Typography>
             </Box>
 
-            {/* Add Member CTA Button - SOLO SUPERADMINS Y ADMINS DE SEDE */}
+            {/* Add Member / Superadmin CTA Buttons */}
             {canCreateMembers && (
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<PersonAddIcon />}
-                onClick={handleOpenCreateModal}
-                sx={{
-                  backgroundColor: '#D97706',
-                  color: '#FFFFFF',
-                  fontWeight: 700,
-                  px: 3,
-                  py: 1.3,
-                  width: { xs: '100%', sm: 'auto' },
-                  borderRadius: 2.5,
-                  boxShadow: '0 8px 20px rgba(217, 119, 6, 0.35)',
-                  '&:hover': {
-                    backgroundColor: '#B45309',
-                    boxShadow: '0 10px 24px rgba(217, 119, 6, 0.45)'
-                  }
-                }}
-              >
-                + Registrar Nuevo Miembro
-              </Button>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                {canManageAllSedes && (
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<ShieldIcon />}
+                    onClick={() => handleOpenCreateModal('SUPER_ADMIN')}
+                    sx={{
+                      background: 'linear-gradient(135deg, #F59E0B 0%, #B45309 100%)',
+                      color: '#FFFFFF',
+                      fontWeight: 800,
+                      px: 2.5,
+                      py: 1.3,
+                      width: { xs: '100%', sm: 'auto' },
+                      borderRadius: 2.5,
+                      border: '1px solid rgba(254, 240, 138, 0.5)',
+                      boxShadow: '0 8px 20px rgba(245, 158, 11, 0.35)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #D97706 0%, #92400E 100%)',
+                        boxShadow: '0 10px 24px rgba(245, 158, 11, 0.5)'
+                      }
+                    }}
+                  >
+                    👑 Crear Superadmin
+                  </Button>
+                )}
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<PersonAddIcon />}
+                  onClick={() => handleOpenCreateModal('MIEMBRO')}
+                  sx={{
+                    backgroundColor: '#0F172A',
+                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    px: 3,
+                    py: 1.3,
+                    width: { xs: '100%', sm: 'auto' },
+                    borderRadius: 2.5,
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    boxShadow: '0 8px 20px rgba(15, 23, 42, 0.45)',
+                    '&:hover': {
+                      backgroundColor: '#1E293B',
+                      boxShadow: '0 10px 24px rgba(15, 23, 42, 0.6)'
+                    }
+                  }}
+                >
+                  + Registrar Miembro
+                </Button>
+              </Stack>
             )}
           </Stack>
         </Box>
@@ -622,15 +666,36 @@ export default function Members() {
                             {member.full_name}
                           </Typography>
                           <Chip
-                            label={member.role || 'MIEMBRO'}
+                            label={
+                              member.role === 'SUPER_ADMIN'
+                                ? '👑 SUPERADMIN GLOBAL'
+                                : member.role === 'ADMIN_SEDE'
+                                  ? '🏢 ADMIN DE SEDE'
+                                  : (member.role || 'MIEMBRO')
+                            }
                             size="small"
                             sx={{
-                              height: 18,
+                              height: 20,
                               fontSize: '0.65rem',
-                              fontWeight: 700,
+                              fontWeight: 800,
                               mt: 0.4,
-                              backgroundColor: member.role === 'SERVIDOR' || member.role === 'LIDER' ? '#EFF6FF' : '#F1F5F9',
-                              color: member.role === 'SERVIDOR' || member.role === 'LIDER' ? '#1D4ED8' : '#475569'
+                              backgroundColor:
+                                member.role === 'SUPER_ADMIN'
+                                  ? '#FEF3C7'
+                                  : member.role === 'ADMIN_SEDE'
+                                    ? '#DBEAFE'
+                                    : member.role === 'SERVIDOR' || member.role === 'LIDER'
+                                      ? '#EFF6FF'
+                                      : '#F1F5F9',
+                              color:
+                                member.role === 'SUPER_ADMIN'
+                                  ? '#B45309'
+                                  : member.role === 'ADMIN_SEDE'
+                                    ? '#1E40AF'
+                                    : member.role === 'SERVIDOR' || member.role === 'LIDER'
+                                      ? '#1D4ED8'
+                                      : '#475569',
+                              border: member.role === 'SUPER_ADMIN' ? '1px solid #F59E0B' : 'none'
                             }}
                           />
                         </Box>
@@ -857,7 +922,9 @@ export default function Members() {
           <DialogTitle sx={{ pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A' }}>
-                Registrar Nuevo Miembro
+                {formData.role === 'SUPER_ADMIN'
+                  ? '👑 Crear Nuevo Superadministrador Global'
+                  : 'Registrar Nuevo Miembro'}
               </Typography>
               <Typography variant="caption" sx={{ color: '#64748B' }}>
                 Directorio oficial de la Iglesia Cristiana Evangélica Restauración
@@ -871,13 +938,17 @@ export default function Members() {
           <DialogContent dividers sx={{ py: 2.5 }}>
             {/* Notice banner based on user's role */}
             <Alert
-              severity={canManageAllSedes ? "info" : "success"}
+              severity={formData.role === 'SUPER_ADMIN' ? 'warning' : (canManageAllSedes ? 'info' : 'success')}
               icon={canManageAllSedes ? <GlobalIcon /> : <LockIcon />}
               sx={{ mb: 2.5, borderRadius: 2 }}
             >
-              {canManageAllSedes ? (
+              {formData.role === 'SUPER_ADMIN' ? (
                 <span>
-                  <strong>Modo Superadmin (Nacional):</strong> Puedes elegir en el selector cualquiera de las 5 sedes para asociar al nuevo miembro.
+                  <strong>👑 Nivel Superadministrador Global:</strong> Este usuario tendrá acceso supremo a <strong>todas las sedes nacionales</strong>, todos los módulos del sistema y facultad para crear administradores y miembros.
+                </span>
+              ) : canManageAllSedes ? (
+                <span>
+                  <strong>Modo Superadmin (Nacional):</strong> Puedes elegir cualquiera de las 5 sedes y asignar el rol (incluyendo otro Superadmin o Admin de Sede).
                 </span>
               ) : (
                 <span>
@@ -898,6 +969,16 @@ export default function Members() {
                     disabled={!canManageAllSedes} // Disabled for Admin de Sede, Enabled for Superadmin
                     onChange={(e) => setFormData({ ...formData, sede_id: e.target.value })}
                   >
+                    {canManageAllSedes && (
+                      <MenuItem value="TODAS">
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <GlobalIcon sx={{ fontSize: 18, color: '#D97706' }} />
+                          <Typography sx={{ fontWeight: 800, color: '#B45309' }}>
+                            🌐 Todas las Sedes (Acceso Global / Nacional)
+                          </Typography>
+                        </Stack>
+                      </MenuItem>
+                    )}
                     {SEDES_LIST.map((sede) => (
                       <MenuItem key={sede.id} value={sede.id}>
                         <Stack direction="row" spacing={1} alignItems="center">
@@ -921,7 +1002,7 @@ export default function Members() {
                   fullWidth
                   required
                   size="small"
-                  label="Nombre Completo del Miembro"
+                  label={formData.role === 'SUPER_ADMIN' ? 'Nombre Completo del Nuevo Superadmin' : 'Nombre Completo del Miembro'}
                   placeholder="Ej: David Alejandro Morales"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
@@ -953,16 +1034,65 @@ export default function Members() {
                 />
               </Grid>
 
+              {/* Custom Username & Initial Password */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Usuario de Acceso (Opcional)"
+                  placeholder="Se genera automático si se deja vacío"
+                  value={formData.access_username}
+                  onChange={(e) => setFormData({ ...formData, access_username: e.target.value })}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <KeyIcon sx={{ fontSize: 16, color: '#64748B' }} />
+                      </InputAdornment>
+                    )
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Contraseña Inicial"
+                  placeholder="123"
+                  value={formData.initial_password}
+                  onChange={(e) => setFormData({ ...formData, initial_password: e.target.value })}
+                />
+              </Grid>
+
               {/* Role */}
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth size="small">
-                  <InputLabel id="modal-role-label">Rol Congregacional</InputLabel>
+                  <InputLabel id="modal-role-label">Rol / Nivel en el Sistema</InputLabel>
                   <Select
                     labelId="modal-role-label"
                     value={formData.role}
-                    label="Rol Congregacional"
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    label="Rol / Nivel en el Sistema"
+                    onChange={(e) => {
+                      const nextRole = e.target.value;
+                      setFormData({
+                        ...formData,
+                        role: nextRole,
+                        sede_id: nextRole === 'SUPER_ADMIN' ? 'TODAS' : (formData.sede_id === 'TODAS' ? 'plaza-venezuela' : formData.sede_id),
+                        ministry: nextRole === 'SUPER_ADMIN' ? 'Dirección General / Superadmin' : formData.ministry,
+                        allowed_modules: nextRole === 'SUPER_ADMIN' || nextRole === 'ADMIN_SEDE' ? ALL_MODULE_KEYS : formData.allowed_modules
+                      });
+                    }}
                   >
+                    {canManageAllSedes && (
+                      <MenuItem value="SUPER_ADMIN" sx={{ fontWeight: 800, color: '#B45309', backgroundColor: '#FFFBEB' }}>
+                        👑 Superadministrador Global (Todas las Sedes)
+                      </MenuItem>
+                    )}
+                    {canManageAllSedes && (
+                      <MenuItem value="ADMIN_SEDE" sx={{ fontWeight: 700, color: '#1E40AF' }}>
+                        🏢 Administrador de Sede Local
+                      </MenuItem>
+                    )}
                     <MenuItem value="MIEMBRO">Miembro en Comunión</MenuItem>
                     <MenuItem value="SERVIDOR">Servidor Activo</MenuItem>
                     <MenuItem value="LIDER">Líder de Área / Conexión</MenuItem>
@@ -981,6 +1111,7 @@ export default function Members() {
                     label="Ministerio Asignado"
                     onChange={(e) => setFormData({ ...formData, ministry: e.target.value })}
                   >
+                    <MenuItem value="Dirección General / Superadmin">Dirección General / Superadmin</MenuItem>
                     <MenuItem value="Grupo de Jóvenes & Conexión">Jóvenes / Grupos de Conexión</MenuItem>
                     <MenuItem value="Protocolo y Bienvenida">Protocolo y Bienvenida</MenuItem>
                     <MenuItem value="Consolidación">Consolidación e Integración</MenuItem>
@@ -1147,14 +1278,18 @@ export default function Members() {
               variant="contained"
               disabled={submitting}
               sx={{
-                backgroundColor: '#83050B',
+                backgroundColor: formData.role === 'SUPER_ADMIN' ? '#D97706' : '#83050B',
                 color: '#FFFFFF',
                 fontWeight: 700,
                 px: 3,
-                '&:hover': { backgroundColor: '#5B0307' }
+                '&:hover': { backgroundColor: formData.role === 'SUPER_ADMIN' ? '#B45309' : '#5B0307' }
               }}
             >
-              {submitting ? 'Guardando...' : 'Registrar Miembro'}
+              {submitting
+                ? 'Guardando...'
+                : formData.role === 'SUPER_ADMIN'
+                  ? '👑 Crear Superadmin'
+                  : 'Registrar Miembro'}
             </Button>
           </DialogActions>
         </form>

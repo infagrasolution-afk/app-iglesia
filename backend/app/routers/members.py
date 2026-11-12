@@ -163,11 +163,20 @@ def add_member(
             detail="Acceso denegado: Solo los Superadministradores y Administradores de Sede pueden registrar nuevos miembros."
         )
 
+    # Si se intenta crear un SUPER_ADMIN o ADMIN_SEDE, validar que quien lo crea sea SUPER_ADMIN
+    requested_role = (req.role or "MIEMBRO").upper()
+    if requested_role in {"SUPER_ADMIN", "ADMIN_PRINCIPAL"} and effective_creator_role not in {"SUPER_ADMIN", "ADMIN_PRINCIPAL", "ADMIN"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso denegado: Solo un Superadministrador puede crear otro Superadministrador."
+        )
+
     # Si es ADMIN_SEDE, forzar que solo pueda crear miembros en su propia sede
     if effective_creator_role == "ADMIN_SEDE" and current_user and current_user.get("sede") and current_user.get("sede") != "TODAS":
         req.sede_id = current_user.get("sede")
 
     sede_names = {
+        "TODAS": "Todas las Sedes (Nacional)",
         "plaza-venezuela": "Restauración Plaza Venezuela",
         "maracay": "Restauración Maracay",
         "la-suiza": "Restauración La Suiza",
@@ -177,10 +186,13 @@ def add_member(
     final_sede_name = req.sede_name or sede_names.get(req.sede_id, req.sede_id)
     final_email = req.email or f"{req.full_name.lower().replace(' ', '.')}@email.com"
 
-    # Validar lista de módulos permitidos
-    selected_modules = [m for m in (req.allowed_modules or DEFAULT_MEMBER_MODULES) if m in ALL_APP_MODULES]
-    if not selected_modules:
-        selected_modules = DEFAULT_MEMBER_MODULES
+    # Validar lista de módulos permitidos (Superadmin y Admin de Sede tienen acceso a todos los módulos)
+    if requested_role in {"SUPER_ADMIN", "ADMIN_SEDE"}:
+        selected_modules = list(ALL_APP_MODULES)
+    else:
+        selected_modules = [m for m in (req.allowed_modules or DEFAULT_MEMBER_MODULES) if m in ALL_APP_MODULES]
+        if not selected_modules:
+            selected_modules = DEFAULT_MEMBER_MODULES
     modules_json = json.dumps(selected_modules, ensure_ascii=False)
 
     try:
@@ -191,8 +203,8 @@ def add_member(
             phone=req.phone or "No registrado",
             sede_id=req.sede_id,
             sede_name=final_sede_name,
-            role=req.role or "MIEMBRO",
-            ministry=req.ministry or "General",
+            role=requested_role,
+            ministry=req.ministry or ("Dirección General / Superadmin" if requested_role == "SUPER_ADMIN" else "General"),
             baptism_status=req.baptism_status or "Bautizado",
             discipleship_status=req.discipleship_status or "En formación",
             joined_at=datetime.utcnow().strftime("%Y-%m-%d"),
@@ -201,19 +213,25 @@ def add_member(
         )
         db.add(new_db_member)
 
-        # Crear o actualizar cuenta de usuario en Neon con sus módulos permitidos
+        # Crear o actualizar cuenta de usuario en Neon con sus módulos permitidos y rol
         initial_password = req.initial_password or "123"
         clean_name = "".join([c for c in req.full_name.lower().replace(" ", "").replace(".", "") if c.isalnum()])[:14]
-        base_username = req.access_username or clean_name or f"user{int(datetime.utcnow().timestamp())}"
+        base_username = (req.access_username or "").strip().lower() or clean_name or f"user{int(datetime.utcnow().timestamp())}"
 
         username = base_username
         existing_user = db.query(models.User).filter(
             (models.User.email == final_email) | (models.User.username == username)
         ).first()
 
+        user_sede_value = "TODAS" if requested_role == "SUPER_ADMIN" else req.sede_id
+
         if existing_user:
             username = existing_user.username
+            existing_user.role = requested_role
+            existing_user.sede = user_sede_value
             existing_user.permissions = modules_json
+            if req.initial_password:
+                existing_user.hashed_password = security.get_password_hash(initial_password)
         else:
             hashed = security.get_password_hash(initial_password)
             new_user = models.User(
@@ -221,8 +239,8 @@ def add_member(
                 email=final_email,
                 full_name=req.full_name,
                 hashed_password=hashed,
-                role=req.role or "MIEMBRO",
-                sede=req.sede_id,
+                role=requested_role,
+                sede=user_sede_value,
                 phone=req.phone,
                 permissions=modules_json,
                 must_change_password=True

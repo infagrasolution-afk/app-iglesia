@@ -103,9 +103,10 @@ export function AuthProvider({ children }) {
       const data = await authAPI.login({ email, password });
       const authToken = data.access_token;
       const requiresChange = Boolean(data.must_change_password || data.user?.must_change_password);
+      const isGlobalRole = data.user?.role === 'SUPER_ADMIN' || data.user?.role === 'ADMIN_PRINCIPAL' || hasGlobalAccess;
       const authUser = {
         ...data.user,
-        sede: data.user.sede || assignedSede,
+        sede: isGlobalRole ? 'TODAS' : (data.user.sede || assignedSede),
         must_change_password: requiresChange
       };
 
