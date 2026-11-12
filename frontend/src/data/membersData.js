@@ -53,15 +53,16 @@ export const INITIAL_MEMBERS = [...SUPERADMIN_MEMBERS];
 
 const LEGACY_KEYS = [
   "restauracion_members_v1",
-  "restauracion_members_clean_v2"
+  "restauracion_members_clean_v2",
+  "restauracion_members_clean_v3",
+  "restauracion_members_clean_v4"
 ];
-const STORAGE_KEY = "restauracion_members_clean_v4";
+const STORAGE_KEY = "restauracion_members_clean_v5";
 
 // Purgar inmediatamente cualquier caché viejo en el navegador al cargar el módulo
 try {
   if (typeof window !== "undefined" && window.localStorage) {
     LEGACY_KEYS.forEach((k) => window.localStorage.removeItem(k));
-    window.localStorage.removeItem("restauracion_members_clean_v3");
   }
 } catch {
   // Ignore storage errors
@@ -97,12 +98,18 @@ export const getStoredMembers = () => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return mergeSuperAdmins(parsed);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return mergeSuperAdmins(parsed);
+      }
     }
   } catch (e) {
     console.error("Error reading stored members:", e);
   }
-  return mergeSuperAdmins(INITIAL_MEMBERS);
+  const fallback = mergeSuperAdmins(INITIAL_MEMBERS);
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
+  } catch {}
+  return fallback;
 };
 
 export const saveStoredMembers = (members) => {

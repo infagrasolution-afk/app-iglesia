@@ -17,15 +17,29 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <title>Iglesia Restauración - Portal</title>
     <script>
+      // Control de versión para purgar automáticamente caché viejo del navegador
+      const APP_BUILD_VERSION = "2026.11.12.v5";
+      try {
+        const lastBuild = localStorage.getItem("restauracion_build_version");
+        if (lastBuild !== APP_BUILD_VERSION) {
+          localStorage.setItem("restauracion_build_version", APP_BUILD_VERSION);
+          ["restauracion_members_v1", "restauracion_members_clean_v2", "restauracion_members_clean_v3", "restauracion_members_clean_v4"].forEach(function(k) {
+            localStorage.removeItem(k);
+          });
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (var name of names) caches.delete(name);
+            });
+          }
+        }
+      } catch (e) {}
+
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js').catch(function() {});
+          navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            reg.update();
+          }).catch(function() {});
         });
-        if ('caches' in window) {
-          caches.keys().then(function(names) {
-            for (var name of names) caches.delete(name);
-          });
-        }
       }
     </script>
     <style>

@@ -56,6 +56,7 @@ import {
 import { useAuth, APP_MODULES_CATALOG, DEFAULT_MEMBER_MODULES, ALL_MODULE_KEYS } from '../context/AuthContext';
 import { SEDES_LIST } from '../data/sedesData';
 import { membersAPI, announcementAPI } from '../services/api';
+import { getStoredMembers, SUPERADMIN_MEMBERS } from '../data/membersData';
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -127,8 +128,15 @@ export default function Members() {
     return user?.sede || 'maracay';
   });
 
-  const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState(() => {
+    try {
+      const stored = getStoredMembers();
+      return Array.isArray(stored) && stored.length > 0 ? stored : SUPERADMIN_MEMBERS;
+    } catch {
+      return SUPERADMIN_MEMBERS;
+    }
+  });
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [ministryFilter, setMinistryFilter] = useState('ALL');
   const [selectedBirthdayMonth, setSelectedBirthdayMonth] = useState(() => new Date().getMonth() + 1);
