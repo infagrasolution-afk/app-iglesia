@@ -215,7 +215,7 @@ def add_member(
         "maracaibo": "Restauración Maracaibo"
     }
     final_sede_name = req.sede_name or sede_names.get(req.sede_id, req.sede_id)
-    final_email = req.email or f"{req.full_name.lower().replace(' ', '.')}@email.com"
+    final_email = (req.email or "").strip()
 
     # Validar lista de módulos permitidos (Superadmin y Admin de Sede tienen acceso a todos los módulos)
     if requested_role in {"SUPER_ADMIN", "ADMIN_SEDE"}:
@@ -250,15 +250,22 @@ def add_member(
         base_username = (req.access_username or "").strip().lower() or clean_name or f"user{int(datetime.utcnow().timestamp())}"
 
         username = base_username
-        existing_user = db.query(models.User).filter(
-            (models.User.email == final_email) | (models.User.username == username)
-        ).first()
+        if final_email:
+            existing_user = db.query(models.User).filter(
+                (models.User.email == final_email) | (models.User.username == username)
+            ).first()
+        else:
+            existing_user = db.query(models.User).filter(
+                models.User.username == username
+            ).first()
 
         user_sede_value = "TODAS" if requested_role == "SUPER_ADMIN" else req.sede_id
 
         if existing_user:
             username = (req.access_username or "").strip().lower() or clean_name or existing_user.username
             existing_user.username = username
+            if final_email:
+                existing_user.email = final_email
             existing_user.role = requested_role
             existing_user.sede = user_sede_value
             existing_user.permissions = modules_json
@@ -268,7 +275,7 @@ def add_member(
             hashed = security.get_password_hash(initial_password)
             new_user = models.User(
                 username=username,
-                email=final_email,
+                email=final_email if final_email else None,
                 full_name=req.full_name,
                 hashed_password=hashed,
                 role=requested_role,
@@ -282,15 +289,17 @@ def add_member(
         db.commit()
         db.refresh(new_db_member)
 
-        # Preparar mensaje de bienvenida por WhatsApp con módulos habilitados
+        # Preparar mensaje de bienvenida por WhatsApp con módulos habilitados y enlace de la app
         clean_phone = clean_venezuela_phone(req.phone or "")
         modules_names_str = ", ".join([MODULE_LABELS.get(m, m) for m in selected_modules])
+        email_line = f"📧 Correo: {final_email}\n" if final_email else ""
         whatsapp_message = (
             f"¡Hola, {req.full_name}! 🕊️\n\n"
             f"Te damos una bendecida bienvenida a la familia de la Iglesia Cristiana Restauración ({final_sede_name}).\n\n"
             f"Hemos activado tu cuenta de acceso a la plataforma del sistema con las siguientes credenciales:\n"
+            f"🌐 Enlace de la App: https://app-iglesia-frontend.onrender.com/\n"
             f"👤 Usuario: {username}\n"
-            f"📧 Correo: {final_email}\n"
+            f"{email_line}"
             f"🔑 Contraseña temporal: {initial_password}\n\n"
             f"📱 Módulos habilitados en tu cuenta:\n"
             f"✅ {modules_names_str}\n\n"
