@@ -35,7 +35,10 @@ import {
   CheckCircle as CheckCircleIcon,
   Key as KeyIcon,
   Send as SendIcon,
-  MenuBook as BibleIcon
+  MenuBook as BibleIcon,
+  AutoAwesome as SparkleIcon,
+  ChevronLeft as PrevIcon,
+  ChevronRight as NextIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { SEDES_LIST, CHURCH_INFO } from '../data/sedesData';
@@ -43,37 +46,63 @@ import { authAPI } from '../services/api';
 
 const LOGIN_BIBLE_VERSES = [
   {
+    theme: '✨ Promesa y Esperanza',
     text: 'Porque yo sé los pensamientos que tengo acerca de vosotros, dice Jehová, pensamientos de paz, y no de mal, para daros el fin que esperáis.',
+    highlightWords: ['pensamientos', 'Jehová,', 'paz,', 'esperáis.'],
     ref: 'Jeremías 29:11'
   },
   {
+    theme: '🦅 Nuevas Fuerzas',
     text: 'Pero los que esperan a Jehová tendrán nuevas fuerzas; levantarán alas como las águilas; correrán, y no se cansarán; caminarán, y no se fatigarán.',
+    highlightWords: ['esperan', 'Jehová', 'nuevas', 'fuerzas;', 'águilas;'],
     ref: 'Isaías 40:31'
   },
   {
+    theme: '🛡️ Fortaleza en Cristo',
     text: 'Todo lo puedo en Cristo que me fortalece.',
+    highlightWords: ['Todo', 'Cristo', 'fortalece.'],
     ref: 'Filipenses 4:13'
   },
   {
+    theme: '🌿 Paz y Pastoreo',
     text: 'Jehová es mi pastor; nada me faltará. En lugares de delicados pastos me hará descansar; junto a aguas de reposo me pastoreará.',
+    highlightWords: ['Jehová', 'pastor;', 'descansar;', 'reposo', 'pastoreará.'],
     ref: 'Salmos 23:1-2'
   },
   {
+    theme: '🔥 Valentía y Fe',
     text: 'Mira que te mando que te esfuerces y seas valiente; no temas ni desmayes, porque Jehová tu Dios estará contigo en dondequiera que vayas.',
+    highlightWords: ['esfuerces', 'valiente;', 'Jehová', 'Dios', 'contigo'],
     ref: 'Josué 1:9'
   },
   {
+    theme: '🕊️ Refugio del Alma',
     text: 'Venid a mí todos los que estáis trabajados y cargados, y yo os haré descansar.',
+    highlightWords: ['Venid', 'todos', 'descansar.'],
     ref: 'Mateo 11:28'
   },
   {
+    theme: '👑 Propósito Eterno',
     text: 'Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien, esto es, a los que conforme a su propósito son llamados.',
+    highlightWords: ['aman', 'Dios,', 'bien,', 'propósito', 'llamados.'],
     ref: 'Romanos 8:28'
   },
   {
+    theme: '⛺ Protección Divina',
     text: 'El que habita al abrigo del Altísimo morará bajo la sombra del Omnipotente. Diré yo a Jehová: Esperanza mía, y castillo mío; mi Dios, en quien confiaré.',
+    highlightWords: ['Altísimo', 'Omnipotente.', 'Esperanza', 'castillo', 'confiaré.'],
     ref: 'Salmos 91:1-2'
   }
+];
+
+const AMBIENT_PARTICLES = [
+  { left: '12%', size: 4, duration: '9s', delay: '0s', opacity: 0.55 },
+  { left: '24%', size: 6, duration: '12s', delay: '1.5s', opacity: 0.4 },
+  { left: '37%', size: 3, duration: '8s', delay: '3s', opacity: 0.65 },
+  { left: '51%', size: 5, duration: '11s', delay: '0.8s', opacity: 0.5 },
+  { left: '64%', size: 4, duration: '10s', delay: '2.2s', opacity: 0.6 },
+  { left: '78%', size: 6, duration: '13s', delay: '4s', opacity: 0.45 },
+  { left: '88%', size: 3.5, duration: '9.5s', delay: '1.2s', opacity: 0.55 }
 ];
 
 export default function Login() {
@@ -174,17 +203,30 @@ export default function Login() {
   // Animated Bible Verses state
   const [verseIndex, setVerseIndex] = useState(0);
   const [verseFade, setVerseFade] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const changeVerse = (nextIdx) => {
+    setVerseFade(false);
+    setTimeout(() => {
+      setVerseIndex(nextIdx);
+      setVerseFade(true);
+    }, 320);
+  };
 
   useEffect(() => {
+    if (isPaused) return;
     const interval = setInterval(() => {
       setVerseFade(false);
       setTimeout(() => {
         setVerseIndex((prev) => (prev + 1) % LOGIN_BIBLE_VERSES.length);
         setVerseFade(true);
-      }, 450);
-    }, 6500);
+      }, 360);
+    }, 7500);
     return () => clearInterval(interval);
-  }, []);
+  }, [isPaused, verseIndex]);
+
+  const currentVerse = LOGIN_BIBLE_VERSES[verseIndex];
+  const currentWords = currentVerse.text.split(' ');
 
   return (
     <Box
@@ -226,9 +268,67 @@ export default function Login() {
           height: { xs: '380px', sm: '520px' },
           background: 'radial-gradient(ellipse at top, rgba(255, 220, 140, 0.35) 0%, rgba(255, 190, 80, 0.12) 35%, rgba(0,0,0,0) 70%)',
           pointerEvents: 'none',
-          zIndex: 1
+          zIndex: 1,
+          '@keyframes floatMote': {
+            '0%': { transform: 'translateY(0px) translateX(0px) scale(0.7)', opacity: 0 },
+            '25%': { opacity: 0.75 },
+            '75%': { opacity: 0.6 },
+            '100%': { transform: 'translateY(-240px) translateX(18px) scale(1.15)', opacity: 0 }
+          },
+          '@keyframes wordCelestialIn': {
+            '0%': {
+              opacity: 0,
+              transform: 'translateY(10px) scale(0.92)',
+              filter: 'blur(6px)',
+              textShadow: '0 0 18px rgba(253, 224, 71, 0.95)'
+            },
+            '65%': {
+              opacity: 1,
+              transform: 'translateY(-1px) scale(1.02)',
+              filter: 'blur(0px)',
+              textShadow: '0 0 12px rgba(253, 224, 71, 0.55)'
+            },
+            '100%': {
+              opacity: 1,
+              transform: 'translateY(0px) scale(1)',
+              filter: 'blur(0px)'
+            }
+          },
+          '@keyframes borderBeamSweep': {
+            '0%': { transform: 'translateX(-120%)' },
+            '100%': { transform: 'translateX(220%)' }
+          },
+          '@keyframes scriptureProgress': {
+            '0%': { width: '0%' },
+            '100%': { width: '100%' }
+          },
+          '@keyframes haloBreath': {
+            '0%, 100%': { transform: 'scale(1)', opacity: 0.55, boxShadow: '0 0 12px rgba(253, 224, 71, 0.45)' },
+            '50%': { transform: 'scale(1.14)', opacity: 0.95, boxShadow: '0 0 22px rgba(253, 224, 71, 0.85)' }
+          }
         }}
       />
+
+      {/* Ambient Floating Golden Light Particles */}
+      {AMBIENT_PARTICLES.map((p, i) => (
+        <Box
+          key={i}
+          sx={{
+            position: 'absolute',
+            bottom: '12%',
+            left: p.left,
+            width: p.size,
+            height: p.size,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, #FFFBEB 0%, #FDE047 60%, rgba(251, 191, 36, 0) 100%)',
+            boxShadow: '0 0 10px 2px rgba(253, 224, 71, 0.65)',
+            pointerEvents: 'none',
+            zIndex: 1,
+            opacity: p.opacity,
+            animation: `floatMote ${p.duration} ease-in-out ${p.delay} infinite`
+          }}
+        />
+      ))}
 
       {/* FROSTED GLASS CARD */}
       <Box
@@ -637,98 +737,313 @@ export default function Login() {
           {loading ? <CircularProgress size={22} sx={{ color: '#0F172A' }} /> : 'Iniciar Sesión'}
         </Button>
 
-        {/* Animated Bible Verses Showcase */}
+        {/* Animated Bible Verses Showcase (Celestial 3D & Word-by-Word Reveal) */}
         <Box
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
           sx={{
-            mt: 2.5,
+            mt: 2.6,
             width: '100%',
-            p: 2,
-            borderRadius: '18px',
-            background: 'linear-gradient(135deg, rgba(253, 224, 71, 0.08) 0%, rgba(15, 23, 42, 0.45) 100%)',
-            border: '1px solid rgba(253, 224, 71, 0.25)',
-            boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.12)',
+            p: { xs: 2, sm: 2.4 },
+             pb: { xs: 2.2, sm: 2.5 },
+            borderRadius: '22px',
+            background:
+              'linear-gradient(145deg, rgba(254, 240, 138, 0.14) 0%, rgba(15, 23, 42, 0.72) 50%, rgba(30, 41, 59, 0.65) 100%)',
+            border: '1px solid rgba(253, 224, 71, 0.38)',
+            boxShadow:
+              '0 16px 36px -8px rgba(0, 0, 0, 0.65), 0 0 28px rgba(253, 224, 71, 0.14), inset 0 1px 2px rgba(255, 255, 255, 0.25)',
             position: 'relative',
             overflow: 'hidden',
-            minHeight: '112px',
+            minHeight: '158px',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center'
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            perspective: '900px',
+            transition: 'all 0.35s ease',
+            '&:hover': {
+              borderColor: 'rgba(253, 224, 71, 0.65)',
+              boxShadow:
+                '0 18px 40px -8px rgba(0, 0, 0, 0.75), 0 0 36px rgba(253, 224, 71, 0.24), inset 0 1px 2px rgba(255, 255, 255, 0.35)'
+            }
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, mb: 0.8 }}>
-            <BibleIcon sx={{ color: '#FDE047', fontSize: 15 }} />
-            <Typography
-              sx={{
-                color: '#FDE047',
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em'
-              }}
-            >
-              Palabra de Vida • RVR1960
-            </Typography>
-          </Box>
+          {/* Sweeping Golden Shimmer Beam along top edge */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '55%',
+              height: '2px',
+              background: 'linear-gradient(90deg, transparent, #FEF08A, #F59E0B, transparent)',
+              animation: 'borderBeamSweep 4.2s ease-in-out infinite',
+              pointerEvents: 'none'
+            }}
+          />
 
-          <Fade in={verseFade} timeout={450}>
-            <Box
-              sx={{
-                px: 0.5,
-                transform: verseFade ? 'translateY(0px)' : 'translateY(6px)',
-                transition: 'transform 0.45s ease'
-              }}
-            >
-              <Typography
+          {/* Decorative Giant Quotation Marks Watermark */}
+          <Typography
+            sx={{
+              position: 'absolute',
+              top: -12,
+              left: 10,
+              fontSize: '5.2rem',
+              fontFamily: 'Georgia, serif',
+              fontWeight: 900,
+              lineHeight: 1,
+              color: 'rgba(253, 224, 71, 0.08)',
+              userSelect: 'none',
+              pointerEvents: 'none'
+            }}
+          >
+            “
+          </Typography>
+          <Typography
+            sx={{
+              position: 'absolute',
+              bottom: 6,
+              right: 12,
+              fontSize: '4.5rem',
+              fontFamily: 'Georgia, serif',
+              fontWeight: 900,
+              lineHeight: 1,
+              color: 'rgba(253, 224, 71, 0.07)',
+              userSelect: 'none',
+              pointerEvents: 'none'
+            }}
+          >
+            ”
+          </Typography>
+
+          {/* Header Bar: Pulsing Bible Emblem + Theme Pill + Prev/Next Controls */}
+          <Box
+            sx={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              mb: 1,
+              zIndex: 2
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.93)',
-                  fontSize: '0.8rem',
-                  fontStyle: 'italic',
-                  lineHeight: 1.45,
-                  mb: 0.6,
-                  textShadow: '0 1px 4px rgba(0,0,0,0.5)'
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(253, 224, 71, 0.3) 0%, rgba(234, 179, 8, 0.1) 100%)',
+                  border: '1px solid rgba(253, 224, 71, 0.55)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  animation: 'haloBreath 3s ease-in-out infinite'
                 }}
               >
-                “{LOGIN_BIBLE_VERSES[verseIndex].text}”
-              </Typography>
+                <BibleIcon sx={{ color: '#FDE047', fontSize: 15 }} />
+              </Box>
+              <Box sx={{ textAlign: 'left' }}>
+                <Typography
+                  sx={{
+                    color: '#FEF08A',
+                    fontSize: '0.65rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.11em',
+                    lineHeight: 1.1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.4
+                  }}
+                >
+                  Palabra Viva <SparkleIcon sx={{ fontSize: 11, color: '#FDE047' }} />
+                </Typography>
+                <Typography
+                  sx={{
+                    color: 'rgba(255, 255, 255, 0.72)',
+                    fontSize: '0.68rem',
+                    fontWeight: 600
+                  }}
+                >
+                  {currentVerse.theme}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Manual Prev / Next Arrow Buttons */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
+              <IconButton
+                size="small"
+                onClick={() =>
+                  changeVerse((verseIndex - 1 + LOGIN_BIBLE_VERSES.length) % LOGIN_BIBLE_VERSES.length)
+                }
+                sx={{
+                  width: 24,
+                  height: 24,
+                  color: 'rgba(255,255,255,0.7)',
+                  backgroundColor: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  '&:hover': {
+                    color: '#FDE047',
+                    backgroundColor: 'rgba(253, 224, 71, 0.16)',
+                    borderColor: 'rgba(253, 224, 71, 0.45)'
+                  }
+                }}
+              >
+                <PrevIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={() => changeVerse((verseIndex + 1) % LOGIN_BIBLE_VERSES.length)}
+                sx={{
+                  width: 24,
+                  height: 24,
+                  color: 'rgba(255,255,255,0.7)',
+                  backgroundColor: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  '&:hover': {
+                    color: '#FDE047',
+                    backgroundColor: 'rgba(253, 224, 71, 0.16)',
+                    borderColor: 'rgba(253, 224, 71, 0.45)'
+                  }
+                }}
+              >
+                <NextIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Box>
+          </Box>
+
+          {/* Animated Scripture Body with Word-by-Word Celestial Reveal */}
+          <Box
+            key={verseIndex}
+            sx={{
+              px: 0.8,
+              py: 0.5,
+              zIndex: 2,
+              opacity: verseFade ? 1 : 0,
+              transform: verseFade
+                ? ' perspective(800px) rotateX(0deg) translateY(0px) scale(1)'
+                : 'perspective(800px) rotateX(-12deg) translateY(8px) scale(0.96)',
+              filter: verseFade ? 'blur(0px)' : 'blur(4px)',
+              transition: 'all 0.36s cubic-bezier(0.22, 1, 0.36, 1)'
+            }}
+          >
+            <Typography
+              component="div"
+              sx={{
+                fontFamily: '"Georgia", "Times New Roman", serif',
+                fontSize: { xs: '0.84rem', sm: '0.88rem' },
+                fontStyle: 'italic',
+                lineHeight: 1.52,
+                mb: 1,
+                textAlign: 'center',
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                columnGap: '4.5px',
+                rowGap: '2px'
+              }}
+            >
+              {currentWords.map((word, wIdx) => {
+                const isHighlighted = (currentVerse.highlightWords || []).includes(word);
+                return (
+                  <Box
+                    component="span"
+                    key={`${verseIndex}-${wIdx}`}
+                    sx={{
+                      display: 'inline-block',
+                      color: isHighlighted ? '#FEF08A' : 'rgba(255, 255, 255, 0.96)',
+                      fontWeight: isHighlighted ? 700 : 400,
+                      textShadow: isHighlighted
+                        ? '0 0 12px rgba(253, 224, 71, 0.55), 0 1px 3px rgba(0,0,0,0.8)'
+                        : '0 1px 4px rgba(0,0,0,0.65)',
+                      opacity: 0,
+                      animation: `wordCelestialIn 0.52s cubic-bezier(0.2, 0.9, 0.3, 1) forwards`,
+                      animationDelay: `${wIdx * 0.045}s`
+                    }}
+                  >
+                    {word}
+                  </Box>
+                );
+              })}
+            </Typography>
+
+            {/* Scripture Reference Pill */}
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.7,
+                px: 1.5,
+                py: 0.35,
+                borderRadius: '50px',
+                background: 'linear-gradient(90deg, rgba(253, 224, 71, 0.18), rgba(245, 158, 11, 0.28), rgba(253, 224, 71, 0.18))',
+                border: '1px solid rgba(253, 224, 71, 0.45)',
+                boxShadow: '0 2px 10px rgba(253, 224, 71, 0.18)'
+              }}
+            >
               <Typography
                 sx={{
                   color: '#FDE047',
-                  fontSize: '0.75rem',
+                  fontSize: '0.74rem',
                   fontWeight: 800,
-                  letterSpacing: '0.03em'
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase'
                 }}
               >
-                — {LOGIN_BIBLE_VERSES[verseIndex].ref}
+                {currentVerse.ref} • RVR1960
               </Typography>
             </Box>
-          </Fade>
+          </Box>
 
           {/* Interactive Verse Indicator Dots */}
-          <Box sx={{ display: 'flex', gap: 0.6, mt: 1.2, justifyContent: 'center' }}>
-            {LOGIN_BIBLE_VERSES.map((_, idx) => (
-              <Box
-                key={idx}
-                onClick={() => {
-                  setVerseFade(false);
-                  setTimeout(() => {
-                    setVerseIndex(idx);
-                    setVerseFade(true);
-                  }, 200);
-                }}
-                sx={{
-                  width: idx === verseIndex ? 18 : 6,
-                  height: 6,
-                  borderRadius: '4px',
-                  backgroundColor: idx === verseIndex ? '#FDE047' : 'rgba(255, 255, 255, 0.28)',
-                  cursor: 'pointer',
-                  transition: 'all 0.35s ease',
-                  '&:hover': {
-                    backgroundColor: idx === verseIndex ? '#FDE047' : 'rgba(255, 255, 255, 0.55)'
-                  }
-                }}
-              />
+          <Box sx={{ display: 'flex', gap: 0.65, mt: 1.3, justifyContent: 'center', zIndex: 2 }}>
+            {LOGIN_BIBLE_VERSES.map((v, idx) => (
+              <Tooltip key={idx} title={v.ref} placement="top" arrow>
+                <Box
+                  onClick={() => changeVerse(idx)}
+                  sx={{
+                    width: idx === verseIndex ? 22 : 6,
+                    height: 6,
+                    borderRadius: '4px',
+                    background:
+                      idx === verseIndex
+                        ? 'linear-gradient(90deg, #FEF08A, #F59E0B)'
+                        : 'rgba(255, 255, 255, 0.25)',
+                    boxShadow: idx === verseIndex ? '0 0 8px rgba(253, 224, 71, 0.7)' : 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.35s ease',
+                    '&:hover': {
+                      backgroundColor: idx === verseIndex ? '#FDE047' : 'rgba(255, 255, 255, 0.55)',
+                      transform: 'scale(1.15)'
+                    }
+                  }}
+                />
+              </Tooltip>
             ))}
+          </Box>
+
+          {/* Bottom Luminous Time Progress Bar */}
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              width: '100%',
+              height: '3px',
+              backgroundColor: 'rgba(255, 255, 255, 0.07)'
+            }}
+          >
+            <Box
+              key={`${verseIndex}-${isPaused ? 'paused' : 'play'}`}
+              sx={{
+                height: '100%',
+                background: 'linear-gradient(90deg, #F59E0B, #FDE047, #FEF9C3)',
+                boxShadow: '0 0 10px rgba(253, 224, 71, 0.85)',
+                animation: isPaused ? 'none' : 'scriptureProgress 7.5s linear forwards'
+              }}
+            />
           </Box>
         </Box>
 
