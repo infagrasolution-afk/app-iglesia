@@ -2,26 +2,49 @@ import { BIBLE_BOOKS, BIBLE_VERSIONS, getVersesForChapter } from '../data/bibleD
 import { EMOTIONS_DATA, THEME_HEADER, getRandomVerseByEmotion, getRandomVerseFromJar } from '../data/emotionsData';
 import { INITIAL_DISCIPLESHIP_DATA } from '../data/discipleshipData';
 
-const API_BASE_URL = '/api';
+const ENV_API_URL = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace(/\/+$/, '')
+  : '';
+
+const API_BASE_URL = ENV_API_URL
+  ? (ENV_API_URL.endsWith('/api') ? ENV_API_URL : `${ENV_API_URL}/api`)
+  : '/api';
 
 async function fetchAPI(endpoint, options = {}) {
   try {
     const token = localStorage.getItem('token');
     const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const reqInit = {
       headers: {
         'Content-Type': 'application/json',
         ...authHeaders,
         ...options.headers
       },
       ...options
-    });
+    };
+
+    let response = await fetch(`${API_BASE_URL}${endpoint}`, reqInit);
+    const contentType = response.headers.get('content-type') || '';
+
+    // Si en Render Static Site (/api) devuelve HTML o 404, intentar con el backend de Render
+    if (
+      API_BASE_URL === '/api' &&
+      (!response.ok || contentType.includes('text/html')) &&
+      typeof window !== 'undefined' &&
+      window.location.hostname.includes('onrender.com')
+    ) {
+      response = await fetch(`https://app-iglesia-backend.onrender.com/api${endpoint}`, reqInit);
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       const message = errorData?.detail || `Error HTTP: ${response.status}`;
       throw new Error(message);
+    }
+
+    const finalContentType = response.headers.get('content-type') || '';
+    if (finalContentType.includes('text/html')) {
+      throw new Error('Respuesta HTML recibida en lugar de JSON API');
     }
 
     return await response.json();
@@ -576,7 +599,13 @@ export const membersAPI = {
   getAll: async (sedeId = null) => {
     try {
       const query = sedeId && sedeId !== 'TODAS' ? `?sede_id=${sedeId}` : '';
-      return await fetchAPI(`/members${query}`);
+      const data = await fetchAPI(`/members${query}`);
+      // Sincronizar caché local con la base de datos de Neon para que nunca queden miembros fantasmas en memoria
+      if (!sedeId || sedeId === 'TODAS') {
+        const { saveStoredMembers } = await import('../data/membersData');
+        saveStoredMembers(Array.isArray(data) ? data : []);
+      }
+      return data;
     } catch {
       const { getStoredMembers } = await import('../data/membersData');
       const all = getStoredMembers();
@@ -589,48 +618,66 @@ export const membersAPI = {
 
   create: async (memberData) => {
     try {
-      return await fetchAPI('/members', {
+      const res = await fetchAPI('/members', {
         method: 'POST',
         body: JSON.stringify(memberData)
       });
+      if (res?.member) {
+        const { getStoredMembers, saveStoredMembers } = await import('../data/membersData');
+        const all = getStoredMembers().filter(m => m.id !== res.member.id);
+        all.unshift(res.member);
+        saveStoredMembers(all);
+      }
+      return res;
     } catch {
       const { getStoredMembers, saveStoredMembers } = await import('../data/membersData');
       const all = getStoredMembers();
       const newId = (all.length > 0 ? Math.max(...all.map(m => m.id)) : 0) + 1;
+      const resolvedUsername = memberData.access_username || '';
       const newMember = {
         id: newId,
         ...memberData,
+        username: resolvedUsername,
         joined_at: new Date().toISOString().split('T')[0]
       };
       all.unshift(newMember);
       saveStoredMembers(all);
-      return { success: true, member: newMember };
+      return {
+        success: true,
+        member: newMember,
+        credentials: {
+          username: resolvedUsername,
+          email: memberData.email,
+          initial_password: memberData.initial_password || '123',
+          allowed_modules: memberData.allowed_modules
+        }
+      };
     }
   },
 
   update: async (memberId, memberData) => {
+    const { getStoredMembers, saveStoredMembers } = await import('../data/membersData');
+    const all = getStoredMembers().map(m => m.id === memberId ? { ...m, ...memberData } : m);
+    saveStoredMembers(all);
     try {
       return await fetchAPI(`/members/${memberId}`, {
         method: 'PUT',
         body: JSON.stringify(memberData)
       });
     } catch {
-      const { getStoredMembers, saveStoredMembers } = await import('../data/membersData');
-      const all = getStoredMembers().map(m => m.id === memberId ? { ...m, ...memberData } : m);
-      saveStoredMembers(all);
       return { success: true };
     }
   },
 
   delete: async (memberId) => {
+    const { getStoredMembers, saveStoredMembers } = await import('../data/membersData');
+    const all = getStoredMembers().filter(m => m.id !== memberId);
+    saveStoredMembers(all);
     try {
       return await fetchAPI(`/members/${memberId}`, {
         method: 'DELETE'
       });
     } catch {
-      const { getStoredMembers, saveStoredMembers } = await import('../data/membersData');
-      const all = getStoredMembers().filter(m => m.id !== memberId);
-      saveStoredMembers(all);
       return { success: true };
     }
   }
