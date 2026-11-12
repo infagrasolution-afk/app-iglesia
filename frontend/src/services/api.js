@@ -92,9 +92,10 @@ export const authAPI = {
 
 // Prayer API Endpoints
 export const prayerAPI = {
-  getAll: async (status = 'all', role = 'MIEMBRO') => {
+  getAll: async (status = 'all', role = 'MIEMBRO', sedeId = null) => {
     try {
-      return await fetchAPI(`/prayers?filter_status=${status}&user_role=${role}`);
+      const sedeQuery = (sedeId && sedeId !== 'TODAS') ? `&sede_id=${sedeId}` : '';
+      return await fetchAPI(`/prayers?filter_status=${status}&user_role=${role}${sedeQuery}`);
     } catch {
       // Fallback mock dataset if backend is offline
       return [
@@ -107,6 +108,7 @@ export const prayerAPI = {
           visibility: 'PUBLIC',
           status: 'active',
           prayer_count: 14,
+          sede_id: 'TODAS',
           created_at: new Date().toISOString()
         },
         {
@@ -118,6 +120,7 @@ export const prayerAPI = {
           visibility: 'PUBLIC',
           status: 'active',
           prayer_count: 8,
+          sede_id: 'TODAS',
           created_at: new Date().toISOString()
         },
         {
@@ -129,6 +132,7 @@ export const prayerAPI = {
           visibility: 'PUBLIC',
           status: 'answered',
           prayer_count: 22,
+          sede_id: 'TODAS',
           created_at: new Date().toISOString()
         }
       ];
@@ -145,9 +149,10 @@ export const prayerAPI = {
       return {
         id: Date.now(),
         ...prayerData,
-        author_name: prayerData.is_anonymous ? 'Hermano(a) en Fe (Anónimo)' : 'Miembro de la Iglesia',
+        author_name: prayerData.is_anonymous ? 'Hermano(a) en Fe (Anónimo)' : (prayerData.author_name || 'Miembro de la Iglesia'),
         status: 'active',
         prayer_count: 1,
+        sede_id: prayerData.sede_id || 'TODAS',
         created_at: new Date().toISOString()
       };
     }
@@ -169,6 +174,14 @@ export const prayerAPI = {
       });
     } catch {
       return { id, status: newStatus };
+    }
+  },
+
+  delete: async (id) => {
+    try {
+      return await fetchAPI(`/prayers/${id}`, { method: 'DELETE' });
+    } catch {
+      return { success: true };
     }
   }
 };
@@ -229,44 +242,82 @@ export const announcementAPI = {
       localStorage.setItem('restauracion_announcements', JSON.stringify(list));
       return newAnnouncement;
     }
+  },
+  delete: async (id) => {
+    try {
+      return await fetchAPI(`/announcements/${id}`, { method: 'DELETE' });
+    } catch {
+      const saved = localStorage.getItem('restauracion_announcements');
+      if (saved) {
+        const list = JSON.parse(saved).filter(a => a.id !== id);
+        localStorage.setItem('restauracion_announcements', JSON.stringify(list));
+      }
+      return { success: true };
+    }
   }
 };
 
 // Sermon API Endpoints
 export const sermonAPI = {
-  getAll: async () => {
+  getAll: async (sedeId = null) => {
     try {
-      return await fetchAPI('/sermons');
+      const q = (sedeId && sedeId !== 'TODAS') ? `?sede_id=${sedeId}` : '';
+      return await fetchAPI(`/sermons${q}`);
     } catch {
       return [
         {
           id: 1,
           title: "Viviendo por Fe en Tiempos de Incertidumbre",
           series: "Serie: Fundamentos Inconmovibles",
-          speaker: "Pr. Alejandro Silva",
+          speaker: "Pastor Said Carrasquel",
           audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+          video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
           pdf_url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+          sede_id: "TODAS",
           created_at: new Date().toISOString()
         },
         {
           id: 2,
           title: "El Poder de la Oración Perseverante",
           series: "Serie: La Oración que Transforma",
-          speaker: "Pr. Alejandro Silva",
+          speaker: "Pastor Said Carrasquel",
           audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
           pdf_url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+          sede_id: "TODAS",
           created_at: new Date().toISOString()
         }
       ];
+    }
+  },
+  create: async (sermonData) => {
+    try {
+      return await fetchAPI('/sermons', {
+        method: 'POST',
+        body: JSON.stringify(sermonData)
+      });
+    } catch {
+      return {
+        id: Date.now(),
+        ...sermonData,
+        created_at: new Date().toISOString()
+      };
+    }
+  },
+  delete: async (id) => {
+    try {
+      return await fetchAPI(`/sermons/${id}`, { method: 'DELETE' });
+    } catch {
+      return { success: true };
     }
   }
 };
 
 // Donation API Endpoints
 export const donationAPI = {
-  getAll: async () => {
+  getAll: async (sedeId = null) => {
     try {
-      return await fetchAPI('/donations');
+      const q = (sedeId && sedeId !== 'TODAS') ? `?sede_id=${sedeId}` : '';
+      return await fetchAPI(`/donations${q}`);
     } catch {
       return [
         {
@@ -275,6 +326,8 @@ export const donationAPI = {
           amount: 100.0,
           payment_method: 'Transferencia Bancaria',
           reference: 'REF-98124',
+          sede_id: 'plaza-venezuela',
+          donor_name: 'Miembro de la Congregación',
           created_at: new Date().toISOString()
         }
       ];
@@ -553,6 +606,33 @@ export const membersAPI = {
       saveStoredMembers(all);
       return { success: true, member: newMember };
     }
+  },
+
+  update: async (memberId, memberData) => {
+    try {
+      return await fetchAPI(`/members/${memberId}`, {
+        method: 'PUT',
+        body: JSON.stringify(memberData)
+      });
+    } catch {
+      const { getStoredMembers, saveStoredMembers } = await import('../data/membersData');
+      const all = getStoredMembers().map(m => m.id === memberId ? { ...m, ...memberData } : m);
+      saveStoredMembers(all);
+      return { success: true };
+    }
+  },
+
+  delete: async (memberId) => {
+    try {
+      return await fetchAPI(`/members/${memberId}`, {
+        method: 'DELETE'
+      });
+    } catch {
+      const { getStoredMembers, saveStoredMembers } = await import('../data/membersData');
+      const all = getStoredMembers().filter(m => m.id !== memberId);
+      saveStoredMembers(all);
+      return { success: true };
+    }
   }
 };
 
@@ -576,6 +656,17 @@ export const sedesAPI = {
     } catch {
       const { createSedeInStorage } = await import('../data/sedesData');
       return createSedeInStorage(sedeData);
+    }
+  },
+
+  assignAdmin: async (sedeId, adminData) => {
+    try {
+      return await fetchAPI(`/sedes/${sedeId}/admin`, {
+        method: 'PUT',
+        body: JSON.stringify(adminData)
+      });
+    } catch {
+      return { success: true, sede_admin: adminData };
     }
   },
 

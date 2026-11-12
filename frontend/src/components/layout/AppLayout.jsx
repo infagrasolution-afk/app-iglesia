@@ -93,7 +93,9 @@ export default function AppLayout({ children }) {
     setCurrentSede,
     activeSedeDetails,
     isAdmin,
+    isSuperAdmin,
     canManageAllSedes,
+    canViewModule,
     mustChangePassword,
     changePassword
   } = useAuth();
@@ -175,8 +177,11 @@ export default function AppLayout({ children }) {
   };
 
 
+  // Filter navigation items according to the modules allowed for this user
+  const visibleNavItems = NAV_ITEMS.filter((item) => canViewModule(item.path));
+
   // Find active nav tab index for bottom navigation
-  const bottomNavItems = NAV_ITEMS.slice(0, 5);
+  const bottomNavItems = visibleNavItems.slice(0, 5);
   const currentNavIndex = bottomNavItems.findIndex((item) => item.path === location.pathname);
 
   const drawerContent = (
@@ -218,7 +223,7 @@ export default function AppLayout({ children }) {
 
       {/* Navigation Links */}
       <List sx={{ px: 1.5, py: 1.5, flexGrow: 1, overflowY: 'auto' }}>
-        {NAV_ITEMS.map((item) => {
+        {visibleNavItems.map((item) => {
           const isSelected = location.pathname === item.path;
           return (
             <ListItem key={item.path} disablePadding sx={{ mb: 0.4 }}>
@@ -471,29 +476,36 @@ export default function AppLayout({ children }) {
             anchorEl={roleAnchorEl}
             open={Boolean(roleAnchorEl)}
             onClose={() => handleRoleMenuClose(null)}
-            PaperProps={{ sx: { width: 230, mt: 1, p: 0.5 } }}
+            PaperProps={{ sx: { width: 250, mt: 1, p: 0.5 } }}
           >
             <Box sx={{ px: 2, py: 1 }}>
-              <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700 }}>
-                CAMBIAR ROL DE USUARIO
+              <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700, display: 'block' }}>
+                {user?.full_name || user?.name || 'Miembro'}
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#94A3B8', fontSize: '0.7rem' }}>
+                Rol activo: {currentRole}
               </Typography>
             </Box>
-            <Divider />
-            <MenuItem onClick={() => handleRoleMenuClose('SUPER_ADMIN')} selected={currentRole === 'SUPER_ADMIN'}>
-              <ListItemText primary="👑 Dueño de la App (Super Admin)" secondary="Control global supremo y asignación de admins" />
-            </MenuItem>
-            <MenuItem onClick={() => handleRoleMenuClose('ADMIN_PRINCIPAL')} selected={currentRole === 'ADMIN_PRINCIPAL'}>
-              <ListItemText primary="🏛️ Pastor Principal (Admin General)" secondary="Supervisión nacional de todas las sedes" />
-            </MenuItem>
-            <MenuItem onClick={() => handleRoleMenuClose('ADMIN_SEDE')} selected={currentRole === 'ADMIN_SEDE'}>
-              <ListItemText primary="🏢 Administrador de Sede" secondary="Liderazgo administrativo de sede" />
-            </MenuItem>
-            <MenuItem onClick={() => handleRoleMenuClose('LIDER')} selected={currentRole === 'LIDER'}>
-              <ListItemText primary="👥 Líder Ministerial" secondary="Discipulador y consejero" />
-            </MenuItem>
-            <MenuItem onClick={() => handleRoleMenuClose('MIEMBRO')} selected={currentRole === 'MIEMBRO'}>
-              <ListItemText primary="🌱 Miembro / Discípulo" secondary="Vista de miembro en su sede" />
-            </MenuItem>
+            {(isSuperAdmin || user?.is_owner || user?.is_global_pastor) && (
+              <>
+                <Divider />
+                <MenuItem onClick={() => handleRoleMenuClose('SUPER_ADMIN')} selected={currentRole === 'SUPER_ADMIN'}>
+                  <ListItemText primary="👑 Dueño de la App (Super Admin)" secondary="Control global supremo y asignación de admins" />
+                </MenuItem>
+                <MenuItem onClick={() => handleRoleMenuClose('ADMIN_PRINCIPAL')} selected={currentRole === 'ADMIN_PRINCIPAL'}>
+                  <ListItemText primary="🏛️ Pastor Principal (Admin General)" secondary="Supervisión nacional de todas las sedes" />
+                </MenuItem>
+                <MenuItem onClick={() => handleRoleMenuClose('ADMIN_SEDE')} selected={currentRole === 'ADMIN_SEDE'}>
+                  <ListItemText primary="🏢 Administrador de Sede" secondary="Liderazgo administrativo de sede" />
+                </MenuItem>
+                <MenuItem onClick={() => handleRoleMenuClose('LIDER')} selected={currentRole === 'LIDER'}>
+                  <ListItemText primary="👥 Líder Ministerial" secondary="Discipulador y consejero" />
+                </MenuItem>
+                <MenuItem onClick={() => handleRoleMenuClose('MIEMBRO')} selected={currentRole === 'MIEMBRO'}>
+                  <ListItemText primary="🌱 Miembro / Discípulo" secondary="Vista de miembro en su sede" />
+                </MenuItem>
+              </>
+            )}
             <Divider sx={{ my: 0.5 }} />
             <MenuItem
               onClick={() => {

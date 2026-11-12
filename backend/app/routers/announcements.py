@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, status, Depends, HTTPException
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from app import schemas, models
@@ -35,3 +35,15 @@ def create_announcement(announcement_in: schemas.AnnouncementCreate, db: Session
     db.commit()
     db.refresh(new_ann)
     return new_ann
+
+@router.delete("/{announcement_id}")
+def delete_announcement(announcement_id: int, db: Session = Depends(get_db)):
+    """
+    Eliminar un anuncio en Neon.
+    """
+    ann = db.query(models.Announcement).filter(models.Announcement.id == announcement_id).first()
+    if not ann:
+        raise HTTPException(status_code=404, detail="Anuncio no encontrado.")
+    db.delete(ann)
+    db.commit()
+    return {"success": True, "message": "Anuncio eliminado exitosamente."}

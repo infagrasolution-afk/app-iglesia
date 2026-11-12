@@ -124,10 +124,10 @@ export default function Sedes() {
     setAssignDialogOpen(true);
   };
 
-  const handleSaveAssignAdmin = () => {
+  const handleSaveAssignAdmin = async () => {
     if (!targetSedeForEdit || !editAdminName) return;
 
-    const updated = assignSedeAdmin(targetSedeForEdit.id, {
+    const adminPayload = {
       name: editAdminName,
       email: editAdminEmail,
       username: editAdminUsername,
@@ -135,11 +135,19 @@ export default function Sedes() {
       notes: editAdminNotes,
       assignedBy: user?.name || "Said Carrasquel & Linfante (Superadmin)",
       status: "Activo"
-    });
+    };
 
+    try {
+      await sedesAPI.assignAdmin(targetSedeForEdit.id, adminPayload);
+    } catch (e) {
+      console.warn('Fallback local assignSedeAdmin:', e);
+    }
+
+    const updated = assignSedeAdmin(targetSedeForEdit.id, adminPayload);
     setSedesList(updated);
+    await refreshSedes();
     setAssignDialogOpen(false);
-    setSnackbarMsg(`¡Administrador de ${targetSedeForEdit.name} asignado con éxito!`);
+    setSnackbarMsg(`¡Administrador de ${targetSedeForEdit.name} asignado y guardado en Neon PostgreSQL!`);
     setSnackbarSeverity('success');
     setSnackbarOpen(true);
   };

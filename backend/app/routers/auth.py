@@ -3,11 +3,17 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
 from datetime import datetime
+import json
 
 from app import schemas, security, models
 from app.database import get_db
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+
+ALL_APP_MODULES = [
+    "prayers", "members", "discipleship", "emotions", "bible",
+    "sedes", "about", "announcements", "sermons", "donations"
+]
 
 @router.post("/login")
 def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
@@ -58,6 +64,29 @@ def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
         "sede": user.sede
     })
 
+    # Resolver módulos permitidos (allowed_modules)
+    allowed_modules = ALL_APP_MODULES
+    if user.role not in ("SUPER_ADMIN", "ADMIN_PRINCIPAL", "ADMIN_SEDE", "ADMIN"):
+        parsed_modules = None
+        if user.permissions:
+            try:
+                parsed = json.loads(user.permissions)
+                if isinstance(parsed, list) and len(parsed) > 0:
+                    parsed_modules = [m for m in parsed if m in ALL_APP_MODULES]
+            except Exception:
+                pass
+        if not parsed_modules:
+            member_rec = db.query(models.Member).filter(models.Member.email.ilike(user.email)).first()
+            if member_rec and member_rec.allowed_modules:
+                try:
+                    parsed = json.loads(member_rec.allowed_modules)
+                    if isinstance(parsed, list) and len(parsed) > 0:
+                        parsed_modules = [m for m in parsed if m in ALL_APP_MODULES]
+                except Exception:
+                    pass
+        if parsed_modules:
+            allowed_modules = parsed_modules
+
     user_dict = {
         "id": user.id,
         "email": user.email,
@@ -68,7 +97,8 @@ def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
         "is_owner": user.is_owner,
         "is_global_pastor": user.is_global_pastor,
         "must_change_password": bool(user.must_change_password),
-        "phone": user.phone
+        "phone": user.phone,
+        "allowed_modules": allowed_modules
     }
 
     return {

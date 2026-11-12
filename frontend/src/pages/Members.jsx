@@ -25,7 +25,9 @@ import {
   InputLabel,
   InputAdornment,
   Avatar,
-  CircularProgress
+  CircularProgress,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -45,9 +47,11 @@ import {
   FilterList as FilterIcon,
   VerifiedUser as VerifiedIcon,
   ContentCopy as CopyIcon,
-  Key as KeyIcon
+  Key as KeyIcon,
+  DeleteOutline as DeleteIcon,
+  Tune as TuneIcon
 } from '@mui/icons-material';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, APP_MODULES_CATALOG, DEFAULT_MEMBER_MODULES, ALL_MODULE_KEYS } from '../context/AuthContext';
 import { SEDES_LIST } from '../data/sedesData';
 import { membersAPI } from '../services/api';
 
@@ -74,6 +78,11 @@ export default function Members() {
   const [welcomeModalData, setWelcomeModalData] = useState(null);
   const [copiedMessage, setCopiedMessage] = useState(false);
 
+  // Modal State for Editing Allowed Modules of an existing member
+  const [modulesEditMember, setModulesEditMember] = useState(null);
+  const [modulesEditList, setModulesEditList] = useState(DEFAULT_MEMBER_MODULES);
+  const [savingModules, setSavingModules] = useState(false);
+
   // Form State
   const defaultFormSede = canManageAllSedes 
     ? (selectedSedeFilter !== 'TODAS' ? selectedSedeFilter : 'plaza-venezuela')
@@ -87,7 +96,8 @@ export default function Members() {
     role: 'MIEMBRO',
     ministry: 'Grupo de Conexión',
     baptism_status: 'Bautizado',
-    discipleship_status: 'En formación'
+    discipleship_status: 'En formación',
+    allowed_modules: DEFAULT_MEMBER_MODULES
   });
 
   // Load members on mount and filter change
@@ -126,9 +136,56 @@ export default function Members() {
       role: 'MIEMBRO',
       ministry: 'Grupo de Conexión',
       baptism_status: 'Bautizado',
-      discipleship_status: 'En formación'
+      discipleship_status: 'En formación',
+      allowed_modules: DEFAULT_MEMBER_MODULES
     });
     setOpenModal(true);
+  };
+
+  const toggleFormModule = (modKey) => {
+    setFormData((prev) => {
+      const current = prev.allowed_modules || [];
+      if (current.includes(modKey)) {
+        if (current.length <= 1) return prev; // Al menos 1 módulo debe quedar activo
+        return { ...prev, allowed_modules: current.filter((m) => m !== modKey) };
+      }
+      return { ...prev, allowed_modules: [...current, modKey] };
+    });
+  };
+
+  const handleOpenEditModules = (member) => {
+    if (!canCreateMembers) return;
+    setModulesEditMember(member);
+    setModulesEditList(
+      Array.isArray(member.allowed_modules) && member.allowed_modules.length > 0
+        ? member.allowed_modules
+        : DEFAULT_MEMBER_MODULES
+    );
+  };
+
+  const handleSaveEditModules = async () => {
+    if (!modulesEditMember) return;
+    setSavingModules(true);
+    try {
+      await membersAPI.update(modulesEditMember.id, { allowed_modules: modulesEditList });
+      setMembers((prev) =>
+        prev.map((m) => (m.id === modulesEditMember.id ? { ...m, allowed_modules: modulesEditList } : m))
+      );
+      setSnackbar({
+        open: true,
+        message: `¡Módulos visibles actualizados para ${modulesEditMember.full_name} en Neon PostgreSQL!`,
+        severity: 'success'
+      });
+      setModulesEditMember(null);
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.message || 'Error al actualizar módulos permitidos',
+        severity: 'error'
+      });
+    } finally {
+      setSavingModules(false);
+    }
   };
 
   const handleCloseModal = () => {
@@ -167,7 +224,9 @@ export default function Members() {
         ministry: formData.ministry,
         baptism_status: formData.baptism_status,
         discipleship_status: formData.discipleship_status,
-        created_by: creatorName
+        created_by: creatorName,
+        creator_role: currentRole,
+        allowed_modules: formData.allowed_modules || DEFAULT_MEMBER_MODULES
       };
 
       const result = await membersAPI.create(payload);
@@ -576,6 +635,60 @@ export default function Members() {
                           />
                         </Box>
                       </Stack>
+
+                      {canCreateMembers && (
+                        <Stack direction="row" spacing={0.5}>
+                          <Tooltip title="Asignar qué módulos puede ver y cuáles no">
+                            <IconButton
+                              size="small"
+                              sx={{ color: '#2563EB', backgroundColor: '#EFF6FF', '&:hover': { backgroundColor: '#DBEAFE' } }}
+                              onClick={() => handleOpenEditModules(member)}
+                            >
+                              <TuneIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Ver credenciales y enviar bienvenida por WhatsApp">
+                            <IconButton
+                              size="small"
+                              sx={{ color: '#25D366', backgroundColor: '#F0FDF4', '&:hover': { backgroundColor: '#DCFCE7' } }}
+                              onClick={() => {
+                                const cleanPhone = (member.phone || '').replace(/\D/g, '');
+                                const formattedPhone = cleanPhone.startsWith('0') && cleanPhone.length === 11
+                                  ? '58' + cleanPhone.slice(1)
+                                  : (cleanPhone.length === 10 && cleanPhone.startsWith('4') ? '58' + cleanPhone : cleanPhone);
+                                const username = (member.full_name || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 14) || `user${member.id}`;
+                                const msg = `¡Hola, ${member.full_name}! 🕊️\n\nTe damos una bendecida bienvenida a la familia de la Iglesia Cristiana Restauración (${member.sede_name || member.sede_id}).\n\nHemos activado tu cuenta de acceso a la plataforma con las siguientes credenciales:\n👤 Usuario: ${username}\n📧 Correo: ${member.email}\n🔑 Contraseña temporal: 123\n\n⚠️ Nota de seguridad: Al iniciar sesión por primera vez, el sistema te solicitará obligatoriamente cambiar tu contraseña.\n\nAtentamente,\nLuis Infante (linfante)\nSuperadministrador / Sistemas\n📲 WhatsApp remitente: 04120161906`;
+                                setWelcomeModalData({
+                                  member,
+                                  credentials: { username, initial_password: '123' },
+                                  whatsapp: {
+                                    phone: formattedPhone,
+                                    message: msg,
+                                    url: formattedPhone ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}` : '',
+                                    sender_name: 'Luis Infante (linfante)',
+                                    sender_phone: '04120161906'
+                                  }
+                                });
+                              }}
+                            >
+                              <WhatsAppIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Eliminar miembro">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={async () => {
+                                await membersAPI.delete(member.id);
+                                setMembers((prev) => prev.filter((m) => m.id !== member.id));
+                                setSnackbar({ open: true, message: `Miembro ${member.full_name} eliminado.`, severity: 'info' });
+                              }}
+                            >
+                              <DeleteIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                      )}
                     </Stack>
 
                     {/* Sede Badge */}
@@ -667,6 +780,61 @@ export default function Members() {
                         Registrado por: {member.created_by}
                       </Typography>
                     )}
+
+                    {/* Allowed Modules Summary on Card */}
+                    <Box
+                      sx={{
+                        mt: 1.2,
+                        p: 1.2,
+                        borderRadius: 2,
+                        backgroundColor: '#F8FAFC',
+                        border: '1px solid #E2E8F0'
+                      }}
+                    >
+                      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.6 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#334155', fontSize: '0.7rem' }}>
+                          📱 Módulos visibles: {(member.allowed_modules || DEFAULT_MEMBER_MODULES).length} / {APP_MODULES_CATALOG.length}
+                        </Typography>
+                        {canCreateMembers && (
+                          <Button
+                            size="small"
+                            startIcon={<TuneIcon sx={{ fontSize: '12px !important' }} />}
+                            onClick={() => handleOpenEditModules(member)}
+                            sx={{
+                              py: 0,
+                              px: 0.8,
+                              minWidth: 0,
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              textTransform: 'none',
+                              color: '#2563EB'
+                            }}
+                          >
+                            Asignar
+                          </Button>
+                        )}
+                      </Stack>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {APP_MODULES_CATALOG.map((mod) => {
+                          const isAllowed = (member.allowed_modules || DEFAULT_MEMBER_MODULES).includes(mod.key);
+                          return (
+                            <Chip
+                              key={mod.key}
+                              label={mod.shortLabel}
+                              size="small"
+                              sx={{
+                                height: 18,
+                                fontSize: '0.62rem',
+                                fontWeight: isAllowed ? 700 : 500,
+                                backgroundColor: isAllowed ? '#DCFCE7' : '#F1F5F9',
+                                color: isAllowed ? '#166534' : '#94A3B8',
+                                textDecoration: isAllowed ? 'none' : 'line-through'
+                              }}
+                            />
+                          );
+                        })}
+                      </Box>
+                    </Box>
                   </CardContent>
                 </Card>
               </Grid>
@@ -858,6 +1026,115 @@ export default function Members() {
                   </Select>
                 </FormControl>
               </Grid>
+
+              {/* Module Visibility / Permissions Selector (Superadmin & Admin Sede) */}
+              <Grid item xs={12}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    mt: 0.5,
+                    borderRadius: 2.5,
+                    backgroundColor: '#F8FAFC',
+                    border: '1px solid #CBD5E1'
+                  }}
+                >
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    justifyContent="space-between"
+                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                    spacing={1}
+                    sx={{ mb: 1.5 }}
+                  >
+                    <Box>
+                      <Typography sx={{ fontWeight: 800, color: '#0F172A', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                        <TuneIcon sx={{ fontSize: 18, color: '#83050B' }} />
+                        ¿Qué módulos puede ver este miembro? ({(formData.allowed_modules || []).length}/{APP_MODULES_CATALOG.length})
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>
+                        Marca los módulos a los que tendrá acceso al iniciar sesión y desmarca los que deseas ocultarle.
+                      </Typography>
+                    </Box>
+
+                    <Stack direction="row" spacing={0.8} flexWrap="wrap" useFlexGap>
+                      <Chip
+                        label="Todos (10)"
+                        size="small"
+                        clickable
+                        onClick={() => setFormData({ ...formData, allowed_modules: ALL_MODULE_KEYS })}
+                        sx={{ fontWeight: 700, fontSize: '0.7rem', backgroundColor: '#E2E8F0' }}
+                      />
+                      <Chip
+                        label="Estándar (Sin Directorio)"
+                        size="small"
+                        clickable
+                        onClick={() => setFormData({ ...formData, allowed_modules: DEFAULT_MEMBER_MODULES })}
+                        sx={{ fontWeight: 700, fontSize: '0.7rem', backgroundColor: '#DBEAFE', color: '#1E40AF' }}
+                      />
+                      <Chip
+                        label="Básico (4)"
+                        size="small"
+                        clickable
+                        onClick={() => setFormData({ ...formData, allowed_modules: ['prayers', 'bible', 'emotions', 'discipleship'] })}
+                        sx={{ fontWeight: 700, fontSize: '0.7rem', backgroundColor: '#FEF3C7', color: '#92400E' }}
+                      />
+                    </Stack>
+                  </Stack>
+
+                  <Grid container spacing={1}>
+                    {APP_MODULES_CATALOG.map((mod) => {
+                      const checked = (formData.allowed_modules || []).includes(mod.key);
+                      return (
+                        <Grid item xs={12} sm={6} key={mod.key}>
+                          <Paper
+                            elevation={0}
+                            onClick={() => toggleFormModule(mod.key)}
+                            sx={{
+                              px: 1.2,
+                              py: 0.6,
+                              borderRadius: 2,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              border: checked ? '1.5px solid #059669' : '1px solid #E2E8F0',
+                              backgroundColor: checked ? '#F0FDF4' : '#FFFFFF',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            <FormControlLabel
+                              onClick={(e) => e.stopPropagation()}
+                              control={
+                                <Checkbox
+                                  size="small"
+                                  checked={checked}
+                                  onChange={() => toggleFormModule(mod.key)}
+                                  sx={{
+                                    py: 0.3,
+                                    color: '#94A3B8',
+                                    '&.Mui-checked': { color: '#059669' }
+                                  }}
+                                />
+                              }
+                              label={
+                                <Box>
+                                  <Typography sx={{ fontSize: '0.8rem', fontWeight: checked ? 700 : 500, color: checked ? '#0F172A' : '#64748B' }}>
+                                    {mod.label}
+                                  </Typography>
+                                  <Typography sx={{ fontSize: '0.68rem', color: '#94A3B8', lineHeight: 1.1 }}>
+                                    {checked ? 'Visible para el miembro' : 'Oculto / Restringido'}
+                                  </Typography>
+                                </Box>
+                              }
+                              sx={{ m: 0, width: '100%' }}
+                            />
+                          </Paper>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                </Paper>
+              </Grid>
             </Grid>
           </DialogContent>
 
@@ -1022,6 +1299,135 @@ export default function Members() {
               <Chip label="Sin teléfono" color="default" size="small" />
             )}
           </Box>
+        </DialogActions>
+      </Dialog>
+
+      {/* MODAL PARA ASIGNAR / EDITAR MÓDULOS VISIBLES DE UN MIEMBRO (SOLO SUPERADMIN Y ADMIN DE SEDE) */}
+      <Dialog
+        open={Boolean(modulesEditMember)}
+        onClose={() => !savingModules && setModulesEditMember(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: '22px', p: 1 }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, color: '#0F172A', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TuneIcon sx={{ color: '#2563EB' }} />
+            <Box>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', color: '#0F172A' }}>
+                Asignar Módulos Visibles
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748B' }}>
+                Miembro: <strong>{modulesEditMember?.full_name}</strong> ({modulesEditMember?.sede_name || modulesEditMember?.sede_id})
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton size="small" onClick={() => setModulesEditMember(null)} disabled={savingModules}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Alert severity="info" sx={{ mb: 2, borderRadius: '12px', fontSize: '0.8rem' }}>
+            Selecciona qué módulos de la plataforma podrá ver <strong>{modulesEditMember?.full_name}</strong> al iniciar sesión y desmarca los que deseas ocultarle.
+          </Alert>
+
+          <Stack direction="row" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
+            <Chip
+              label="Habilitar Todos (10)"
+              size="small"
+              clickable
+              onClick={() => setModulesEditList(ALL_MODULE_KEYS)}
+              sx={{ fontWeight: 700, backgroundColor: '#E2E8F0' }}
+            />
+            <Chip
+              label="Estándar Miembro (Sin Directorio)"
+              size="small"
+              clickable
+              onClick={() => setModulesEditList(DEFAULT_MEMBER_MODULES)}
+              sx={{ fontWeight: 700, backgroundColor: '#DBEAFE', color: '#1E40AF' }}
+            />
+            <Chip
+              label="Básico Nuevo Creyente (4)"
+              size="small"
+              clickable
+              onClick={() => setModulesEditList(['prayers', 'bible', 'emotions', 'discipleship'])}
+              sx={{ fontWeight: 700, backgroundColor: '#FEF3C7', color: '#92400E' }}
+            />
+          </Stack>
+
+          <Grid container spacing={1.2}>
+            {APP_MODULES_CATALOG.map((mod) => {
+              const checked = modulesEditList.includes(mod.key);
+              const toggleMod = () => {
+                if (checked) {
+                  if (modulesEditList.length <= 1) return;
+                  setModulesEditList(modulesEditList.filter((m) => m !== mod.key));
+                } else {
+                  setModulesEditList([...modulesEditList, mod.key]);
+                }
+              };
+              return (
+                <Grid item xs={12} sm={6} key={mod.key}>
+                  <Paper
+                    elevation={0}
+                    onClick={toggleMod}
+                    sx={{
+                      px: 1.5,
+                      py: 0.8,
+                      borderRadius: 2,
+                      cursor: 'pointer',
+                      border: checked ? '1.5px solid #059669' : '1px solid #E2E8F0',
+                      backgroundColor: checked ? '#F0FDF4' : '#FFFFFF'
+                    }}
+                  >
+                    <FormControlLabel
+                      onClick={(e) => e.stopPropagation()}
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={checked}
+                          onChange={toggleMod}
+                          sx={{ py: 0.3, '&.Mui-checked': { color: '#059669' } }}
+                        />
+                      }
+                      label={
+                        <Box>
+                          <Typography sx={{ fontSize: '0.82rem', fontWeight: checked ? 700 : 500, color: checked ? '#0F172A' : '#64748B' }}>
+                            {mod.label}
+                          </Typography>
+                          <Typography sx={{ fontSize: '0.68rem', color: checked ? '#059669' : '#94A3B8' }}>
+                            {checked ? '✓ Puede ver este módulo' : '✕ Oculto para este miembro'}
+                          </Typography>
+                        </Box>
+                      }
+                      sx={{ m: 0, width: '100%' }}
+                    />
+                  </Paper>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setModulesEditMember(null)} disabled={savingModules} color="inherit" sx={{ borderRadius: '50px' }}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveEditModules}
+            disabled={savingModules}
+            sx={{
+              borderRadius: '50px',
+              px: 3,
+              fontWeight: 700,
+              backgroundColor: '#2563EB',
+              '&:hover': { backgroundColor: '#1D4ED8' }
+            }}
+          >
+            {savingModules ? 'Guardando en Neon...' : 'Guardar Módulos Permitidos'}
+          </Button>
         </DialogActions>
       </Dialog>
 

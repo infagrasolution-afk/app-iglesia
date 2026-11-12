@@ -1,12 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from sqlalchemy import text
+from app.database import engine
+from app import models
 from app.routers import auth, prayers, announcements, sermons, donations, bible, emotions, discipleship, sedes, members
+
+# Asegurar que todas las tablas y nuevas columnas existan en PostgreSQL / SQLite al iniciar
+try:
+    models.Base.metadata.create_all(bind=engine)
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE members ADD COLUMN IF NOT EXISTS allowed_modules TEXT;"))
+except Exception as e:
+    print(f"Aviso inicializando tablas de base de datos: {e}")
 
 app = FastAPI(
     title="Iglesia Restauración API",
-    description="API REST Backend para la aplicación web y PWA móvil de la iglesia Restauración (Almacenamiento JSON).",
-    version="1.0.0"
+    description="API REST Backend para la aplicación web y PWA móvil de la Iglesia Cristiana Restauración (Persistencia en Neon PostgreSQL Multi-Sede).",
+    version="2.0.0"
 )
 
 # CORS Configuration
@@ -28,7 +39,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include Routers (now running 100% on JSON Storage)
+# Include Routers (Neon PostgreSQL Multi-Sede Persistence)
 app.include_router(auth.router)
 app.include_router(prayers.router)
 app.include_router(announcements.router)
@@ -44,11 +55,11 @@ app.include_router(members.router)
 def root():
     return {
         "message": "Bienvenido a la API REST de la Iglesia Restauración",
-        "storage": "JSON Files (backend/data/)",
+        "storage": "Neon PostgreSQL (Multi-Sede)",
         "docs_url": "/docs",
         "status": "online"
     }
 
 @app.get("/api/status")
 def status_check():
-    return {"status": "ok", "app": "Iglesia Restauración API", "version": "1.0.0", "storage": "JSON"}
+    return {"status": "ok", "app": "Iglesia Restauración API", "version": "2.0.0", "storage": "Neon PostgreSQL"}

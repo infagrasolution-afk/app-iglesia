@@ -17,32 +17,42 @@ import Sedes from './pages/Sedes';
 import AboutUs from './pages/AboutUs';
 import Members from './pages/Members';
 
+function ModuleGuard({ moduleKey, fallbackPath, children }) {
+  const { canViewModule } = useAuth();
+  if (!canViewModule(moduleKey)) {
+    return <Navigate to={fallbackPath} replace />;
+  }
+  return children;
+}
+
 function ProtectedAppRoutes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, allowedModules } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
+  const firstAllowedPath = `/${(allowedModules && allowedModules[0]) || 'prayers'}`;
+
   return (
     <AppLayout>
       <Routes>
-        <Route path="/" element={<Navigate to="/prayers" replace />} />
-        <Route path="/prayers" element={<PrayerWall />} />
-        <Route path="/members" element={<Members />} />
+        <Route path="/" element={<Navigate to={firstAllowedPath} replace />} />
+        <Route path="/prayers" element={<ModuleGuard moduleKey="prayers" fallbackPath={firstAllowedPath}><PrayerWall /></ModuleGuard>} />
+        <Route path="/members" element={<ModuleGuard moduleKey="members" fallbackPath={firstAllowedPath}><Members /></ModuleGuard>} />
         <Route path="/miembros" element={<Navigate to="/members" replace />} />
-        <Route path="/discipleship" element={<Discipleship />} />
+        <Route path="/discipleship" element={<ModuleGuard moduleKey="discipleship" fallbackPath={firstAllowedPath}><Discipleship /></ModuleGuard>} />
         <Route path="/discipulado" element={<Navigate to="/discipleship" replace />} />
-        <Route path="/emotions" element={<Emotions />} />
+        <Route path="/emotions" element={<ModuleGuard moduleKey="emotions" fallbackPath={firstAllowedPath}><Emotions /></ModuleGuard>} />
         <Route path="/frasco" element={<Navigate to="/emotions" replace />} />
-        <Route path="/bible" element={<Bible />} />
-        <Route path="/sedes" element={<Sedes />} />
-        <Route path="/about" element={<AboutUs />} />
+        <Route path="/bible" element={<ModuleGuard moduleKey="bible" fallbackPath={firstAllowedPath}><Bible /></ModuleGuard>} />
+        <Route path="/sedes" element={<ModuleGuard moduleKey="sedes" fallbackPath={firstAllowedPath}><Sedes /></ModuleGuard>} />
+        <Route path="/about" element={<ModuleGuard moduleKey="about" fallbackPath={firstAllowedPath}><AboutUs /></ModuleGuard>} />
         <Route path="/nosotros" element={<Navigate to="/about" replace />} />
-        <Route path="/announcements" element={<Announcements />} />
-        <Route path="/sermons" element={<Sermons />} />
-        <Route path="/donations" element={<Donations />} />
-        <Route path="*" element={<Navigate to="/prayers" replace />} />
+        <Route path="/announcements" element={<ModuleGuard moduleKey="announcements" fallbackPath={firstAllowedPath}><Announcements /></ModuleGuard>} />
+        <Route path="/sermons" element={<ModuleGuard moduleKey="sermons" fallbackPath={firstAllowedPath}><Sermons /></ModuleGuard>} />
+        <Route path="/donations" element={<ModuleGuard moduleKey="donations" fallbackPath={firstAllowedPath}><Donations /></ModuleGuard>} />
+        <Route path="*" element={<Navigate to={firstAllowedPath} replace />} />
       </Routes>
     </AppLayout>
   );

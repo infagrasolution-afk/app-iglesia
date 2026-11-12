@@ -2,6 +2,26 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
 import { getSedesList, assignSedeAdmin, INITIAL_SEDES_LIST } from '../data/sedesData';
 
+export const APP_MODULES_CATALOG = [
+  { key: 'prayers', label: 'Muro de Oración', shortLabel: 'Oración', path: '/prayers', desc: 'Intercesión y peticiones de fe' },
+  { key: 'members', label: 'Directorio de Miembros', shortLabel: 'Directorio', path: '/members', desc: 'Directorio congregacional de la sede' },
+  { key: 'discipleship', label: 'Discipulado Bíblico', shortLabel: 'Discipulado', path: '/discipleship', desc: 'Lecciones, módulos y evaluaciones' },
+  { key: 'emotions', label: 'Frasco de Emociones', shortLabel: 'Emociones', path: '/emotions', desc: 'Promesas bíblicas según tu estado de ánimo' },
+  { key: 'bible', label: 'Santa Biblia (3 Versiones)', shortLabel: 'Biblia', path: '/bible', desc: 'RVR1960, NVI, NTV y Devocional IA' },
+  { key: 'sedes', label: 'Nuestras Sedes', shortLabel: 'Sedes', path: '/sedes', desc: 'Ubicaciones, horarios y pastores' },
+  { key: 'about', label: 'Nuestra Iglesia', shortLabel: 'Nosotros', path: '/about', desc: 'Historia, visión, misión y doctrina' },
+  { key: 'announcements', label: 'Anuncios y Boletín', shortLabel: 'Anuncios', path: '/announcements', desc: 'Comunicados oficiales y eventos' },
+  { key: 'sermons', label: 'Sermones y Podcast', shortLabel: 'Sermones', path: '/sermons', desc: 'Prédicas en audio, video y bosquejos PDF' },
+  { key: 'donations', label: 'Diezmos y Ofrendas', shortLabel: 'Diezmos', path: '/donations', desc: 'Aportes, Pago Móvil y recibos digitales' }
+];
+
+export const ALL_MODULE_KEYS = APP_MODULES_CATALOG.map((m) => m.key);
+
+export const DEFAULT_MEMBER_MODULES = [
+  'prayers', 'discipleship', 'emotions', 'bible',
+  'sedes', 'about', 'announcements', 'sermons', 'donations'
+];
+
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
@@ -367,6 +387,28 @@ export function AuthProvider({ children }) {
   const canManageAllSedes = isSuperAdmin || isAdminPrincipal;
   const canCreateMembers = canManageAllSedes || isSedeAdmin;
 
+  // Módulos permitidos para el usuario activo:
+  // Superadmins y Admins de Sede siempre ven todos los módulos.
+  // Los miembros ven únicamente los módulos asignados en su registro (user.allowed_modules).
+  const allowedModules = (canManageAllSedes || isSedeAdmin)
+    ? ALL_MODULE_KEYS
+    : (Array.isArray(user?.allowed_modules) && user.allowed_modules.length > 0
+        ? user.allowed_modules
+        : DEFAULT_MEMBER_MODULES);
+
+  const canViewModule = (keyOrPath) => {
+    if (canManageAllSedes || isSedeAdmin) return true;
+    const clean = (keyOrPath || '').replace(/^\//, '');
+    const aliasMap = {
+      miembros: 'members',
+      discipulado: 'discipleship',
+      frasco: 'emotions',
+      nosotros: 'about'
+    };
+    const resolvedKey = aliasMap[clean] || clean;
+    return allowedModules.includes(resolvedKey);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -383,6 +425,8 @@ export function AuthProvider({ children }) {
         canManageAllSedes,
         canCreateMembers,
         isAdmin: canManageAllSedes || isSedeAdmin,
+        allowedModules,
+        canViewModule,
         login,
         logout,
         demoLogin,
@@ -391,7 +435,6 @@ export function AuthProvider({ children }) {
         mustChangePassword,
         changePassword
       }}
-
     >
       {children}
     </AuthContext.Provider>

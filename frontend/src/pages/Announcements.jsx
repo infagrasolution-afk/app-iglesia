@@ -21,7 +21,8 @@ import {
   Skeleton,
   Stack,
   Alert,
-  Tooltip
+  Tooltip,
+  IconButton
 } from '@mui/material';
 import {
   Campaign as CampaignIcon,
@@ -144,6 +145,17 @@ export default function Announcements() {
   // Only superadmin or sede admin can create announcements
   const canPublish = canManageAllSedes || isSedeAdmin || currentRole === 'ADMIN';
 
+  const handleDelete = async (id) => {
+    try {
+      await announcementAPI.delete(id);
+      setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+      setSuccessMsg('Anuncio eliminado correctamente.');
+      setTimeout(() => setSuccessMsg(''), 3500);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <Box sx={{ py: 1 }}>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
@@ -265,10 +277,19 @@ export default function Announcements() {
                           />
                         )}
                       </Stack>
-                      <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
-                        {ann.created_by && `${ann.created_by} • `}
-                        {new Date(ann.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+                          {ann.created_by && `${ann.created_by} • `}
+                          {new Date(ann.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </Typography>
+                        {canPublish && (canManageAllSedes || ann.sede_id === user?.sede) && (
+                          <Tooltip title="Eliminar anuncio">
+                            <IconButton size="small" color="error" onClick={() => handleDelete(ann.id)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
                     </Box>
 
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: '#0F172A' }}>

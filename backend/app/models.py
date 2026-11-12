@@ -96,6 +96,7 @@ class Member(Base):
     discipleship_status = Column(String(100), default="En formación")
     joined_at = Column(String(50), nullable=True)
     created_by = Column(String(255), nullable=True)
+    allowed_modules = Column(Text, nullable=True)                # JSON list of allowed module keys
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Announcement(Base):

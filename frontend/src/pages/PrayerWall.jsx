@@ -39,13 +39,15 @@ import {
   Lock as LockIcon,
   Public as PublicIcon,
   PersonOff as AnonymousIcon,
-  FilterList as FilterIcon
+  FilterList as FilterIcon,
+  DeleteOutline as DeleteIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { prayerAPI } from '../services/api';
 
 export default function PrayerWall() {
-  const { currentRole, user } = useAuth();
+  const { currentRole, user, currentSede, isAdmin } = useAuth();
+  const isLeaderOrAdmin = isAdmin || ['SUPER_ADMIN', 'ADMIN_PRINCIPAL', 'ADMIN_SEDE', 'ADMIN', 'LIDER'].includes(currentRole);
 
   // State
   const [prayers, setPrayers] = useState([]);
@@ -71,7 +73,7 @@ export default function PrayerWall() {
       if (activeTab === 1) statusFilter = 'active';
       if (activeTab === 2) statusFilter = 'answered';
 
-      const data = await prayerAPI.getAll(statusFilter, currentRole);
+      const data = await prayerAPI.getAll(statusFilter, currentRole, currentSede);
       setPrayers(data);
     } catch (err) {
       console.error('Error al cargar peticiones de oración:', err);
@@ -82,7 +84,7 @@ export default function PrayerWall() {
 
   useEffect(() => {
     fetchPrayers();
-  }, [activeTab, currentRole]);
+  }, [activeTab, currentRole, currentSede]);
 
   // Handle Pray Action (Incremental Realtime Counter)
   const handlePrayClick = async (id) => {
@@ -124,8 +126,10 @@ export default function PrayerWall() {
       const created = await prayerAPI.create({
         title: newTitle,
         description: newDetail,
+        author_name: user?.full_name || user?.name || 'Miembro de la Iglesia',
         is_anonymous: isAnonymous,
-        visibility: visibility
+        visibility: visibility,
+        sede_id: (currentSede && currentSede !== 'TODAS') ? currentSede : (user?.sede || 'TODAS')
       });
 
       setPrayers([created, ...prayers]);
@@ -207,7 +211,7 @@ export default function PrayerWall() {
               <Tab label="Todas las Peticiones" />
               <Tab label="En Oración" />
               <Tab label="Respondidas" />
-              {(currentRole === 'ADMIN' || currentRole === 'LIDER') && (
+              {isLeaderOrAdmin && (
                 <Tab label="Solo Líderes" icon={<LockIcon sx={{ fontSize: '0.9rem' }} />} iconPosition="end" />
               )}
             </Tabs>
@@ -350,19 +354,35 @@ export default function PrayerWall() {
                       />
                     </Button>
 
-                    {(currentRole === 'ADMIN' || currentRole === 'LIDER') && !isAnswered && (
-                      <Tooltip title="Marcar como oración contestada por Dios">
-                        <Button
-                          size="small"
-                          color="success"
-                          startIcon={<CheckCircleIcon />}
-                          onClick={() => handleMarkAnswered(prayer.id)}
-                          sx={{ fontSize: '0.8rem' }}
-                        >
-                          Marcar Respondida
-                        </Button>
-                      </Tooltip>
-                    )}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      {isLeaderOrAdmin && !isAnswered && (
+                        <Tooltip title="Marcar como oración contestada por Dios">
+                          <Button
+                            size="small"
+                            color="success"
+                            startIcon={<CheckCircleIcon />}
+                            onClick={() => handleMarkAnswered(prayer.id)}
+                            sx={{ fontSize: '0.8rem' }}
+                          >
+                            Marcar Respondida
+                          </Button>
+                        </Tooltip>
+                      )}
+                      {isLeaderOrAdmin && (
+                        <Tooltip title="Eliminar petición">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={async () => {
+                              await prayerAPI.delete(prayer.id);
+                              setPrayers((prev) => prev.filter((p) => p.id !== prayer.id));
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
                   </CardActions>
                 </Card>
               </Grid>

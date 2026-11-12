@@ -47,7 +47,7 @@ import { useAuth } from '../context/AuthContext';
 const PRESET_AMOUNTS = [10, 25, 50, 100, 200];
 
 export default function Donations() {
-  const { currentSede } = useAuth();
+  const { currentSede, user } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
 
   // Sede selection for donation
@@ -74,8 +74,8 @@ export default function Donations() {
 
   const fetchHistory = async () => {
     try {
-      const data = await donationAPI.getAll();
-      setHistory(data);
+      const data = await donationAPI.getAll(currentSede);
+      setHistory(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
     }
@@ -83,7 +83,7 @@ export default function Donations() {
 
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [currentSede]);
 
   const handleCopy = (text, label) => {
     navigator.clipboard.writeText(text);
@@ -110,7 +110,10 @@ export default function Donations() {
         donation_type: donationType,
         amount: parseFloat(amount),
         payment_method: paymentMethod === 'transfer' ? 'Transferencia Bancaria' : 'Pago Móvil',
-        reference: reference || 'CONFIRMADO_ONLINE'
+        reference: reference || 'CONFIRMADO_ONLINE',
+        sede_id: targetSedeId,
+        donor_name: user?.full_name || user?.name || 'Miembro de la Congregación',
+        donor_phone: user?.phone || null
       });
 
       setCompletedDonation(result);

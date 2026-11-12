@@ -63,8 +63,10 @@ class PasswordResetApproval(BaseModel):
 class PrayerCreate(BaseModel):
     title: str
     description: str
+    author_name: Optional[str] = None
     is_anonymous: bool = False
     visibility: str = "PUBLIC" # PUBLIC or LEADERS
+    sede_id: Optional[str] = "TODAS"
 
 class PrayerResponse(BaseModel):
     id: int
@@ -76,6 +78,7 @@ class PrayerResponse(BaseModel):
     visibility: str
     status: str
     prayer_count: int
+    sede_id: Optional[str] = "TODAS"
     created_at: datetime
     class Config:
         from_attributes = True
@@ -107,10 +110,12 @@ class SermonCreate(BaseModel):
     audio_url: Optional[str] = None
     video_url: Optional[str] = None
     pdf_url: Optional[str] = None
+    date: Optional[str] = None
+    sede_id: Optional[str] = "TODAS"
 
 class SermonResponse(SermonCreate):
     id: int
-    created_at: datetime
+    created_at: Optional[datetime] = None
     class Config:
         from_attributes = True
 
@@ -120,10 +125,14 @@ class DonationCreate(BaseModel):
     amount: float
     payment_method: str
     reference: Optional[str] = None
+    sede_id: Optional[str] = "TODAS"
+    donor_name: Optional[str] = None
+    donor_phone: Optional[str] = None
 
 class DonationResponse(DonationCreate):
     id: int
     user_id: Optional[int] = None
+    status: Optional[str] = "CONFIRMADO"
     created_at: datetime
     class Config:
         from_attributes = True
