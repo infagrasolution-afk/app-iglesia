@@ -80,7 +80,7 @@ export default function Members() {
 
   // Selected Sede filter in directory view
   const [selectedSedeFilter, setSelectedSedeFilter] = useState(() => {
-    if (canManageAllSedes) return currentSede || 'TODAS';
+    if (canManageAllSedes) return 'TODAS';
     return user?.sede || 'maracay';
   });
 
@@ -270,16 +270,33 @@ export default function Members() {
       const result = await membersAPI.create(payload);
 
       if (result.success || result.id) {
+        const effectiveUser = result.credentials?.username || finalUsername;
+        const createdMember = result.member || {
+          id: result.id || Date.now(),
+          ...payload,
+          username: effectiveUser,
+          joined_at: new Date().toISOString().split('T')[0]
+        };
+
         setSnackbar({
           open: true,
           message: payload.role === 'SUPER_ADMIN'
-            ? `¡Superadministrador ${payload.full_name} (@${result.credentials?.username || finalUsername}) creado con éxito!`
-            : `¡Miembro ${payload.full_name} (@${result.credentials?.username || finalUsername}) registrado con éxito en ${payload.sede_name}!`,
+            ? `¡Superadministrador ${payload.full_name} (@${effectiveUser}) creado con éxito!`
+            : `¡Miembro ${payload.full_name} (@${effectiveUser}) registrado con éxito en ${payload.sede_name}!`,
           severity: 'success'
         });
         setOpenModal(false);
-        // Refresh list
+
+        if (canManageAllSedes && selectedSedeFilter !== 'TODAS' && selectedSedeFilter !== payload.sede_id) {
+          setSelectedSedeFilter('TODAS');
+        }
+
+        // Refresh list and guarantee created member is in state
         await loadMembersData();
+        setMembers((prev) => {
+          const exists = prev.some((m) => m.id === createdMember.id);
+          return exists ? prev : [createdMember, ...prev];
+        });
 
         // Levantar Modal de Bienvenida con Credenciales y Envío por WhatsApp
         const cleanPhone = (payload.phone || '').replace(/\D/g, '');
@@ -287,12 +304,13 @@ export default function Members() {
           ? '58' + cleanPhone.slice(1)
           : cleanPhone;
 
-        const effectiveUser = result.credentials?.username || finalUsername;
         const emailLine = cleanEmail ? `📧 Correo: ${cleanEmail}\n` : '';
-        const defaultMsg = `¡Hola, ${payload.full_name}! 🕊️\n\nTe damos una bendecida bienvenida a la familia de la Iglesia Restauración (${payload.sede_name}).\n\nHemos activado tu cuenta de acceso a la plataforma con las siguientes credenciales:\n🌐 Enlace de la App: https://app-iglesia-frontend.onrender.com/\n👤 Usuario: ${effectiveUser}\n${emailLine}🔑 Contraseña temporal: ${result.credentials?.initial_password || payload.initial_password || '123'}\n\n⚠️ Nota de seguridad: Al iniciar sesión por primera vez, el sistema te solicitará obligatoriamente cambiar tu contraseña.`;
+        const defaultMsg = `¡Hola, ${payload.full_name}! 🕊️\n\nTe damos una bendecida bienvenida a la familia de la Iglesia
+        
+        Restauración (${payload.sede_name}).\n\nHemos activado tu cuenta de acceso a la plataforma con las siguientes credenciales:\n🌐 Enlace de la App: https://app-iglesia-frontend.onrender.com/\n👤 Usuario: ${effectiveUser}\n${emailLine}🔑 Contraseña temporal: ${result.credentials?.initial_password || payload.initial_password || '123'}\n\n⚠️ Nota de seguridad: Al iniciar sesión por primera vez, el sistema te solicitará obligatoriamente cambiar tu contraseña.`;
 
         setWelcomeModalData({
-          member: result.member || payload,
+          member: createdMember,
           credentials: result.credentials || {
             username: effectiveUser,
             initial_password: payload.initial_password || '123'
@@ -321,10 +339,10 @@ export default function Members() {
   const filteredMembers = useMemo(() => {
     return members.filter((m) => {
       // Sede filter
-      if (!canManageAllSedes && user?.sede && m.sede_id !== user.sede) {
+      if (!canManageAllSedes && user?.sede && m.sede_id !== user.sede && m.sede_id !== 'TODAS') {
         return false;
       }
-      if (canManageAllSedes && selectedSedeFilter !== 'TODAS' && m.sede_id !== selectedSedeFilter) {
+      if (canManageAllSedes && selectedSedeFilter !== 'TODAS' && m.sede_id !== selectedSedeFilter && m.sede_id !== 'TODAS') {
         return false;
       }
 

@@ -7,17 +7,20 @@ url = os.getenv('DATABASE_URL')
 conn = psycopg2.connect(url)
 cur = conn.cursor()
 
-# Asegurar que la columna allowed_modules exista en members y limpiar registros demo
+# Asegurar que la columna allowed_modules exista en members y eliminar restricciones que bloqueaban registros sin email o con sede='TODAS'
 try:
     cur.execute("ALTER TABLE members ADD COLUMN IF NOT EXISTS allowed_modules TEXT;")
-    cur.execute("DELETE FROM members;")
-    cur.execute("DELETE FROM users WHERE username = 'saidcarrasquel';")
-    cur.execute("DELETE FROM users WHERE role NOT IN ('SUPER_ADMIN', 'ADMIN_SEDE');")
+    cur.execute("ALTER TABLE users ALTER COLUMN email DROP NOT NULL;")
+    cur.execute("ALTER TABLE members DROP CONSTRAINT IF EXISTS fk_members_sede;")
     conn.commit()
-    print("Tabla 'members' vaciada (0 miembros de prueba) y usuarios demo eliminados en Neon PostgreSQL.")
+    print("Esquema de 'members' y 'users' actualizado en Neon PostgreSQL (email opcional y soporte sede='TODAS').")
 except Exception as e:
     conn.rollback()
-    print(f"Aviso limpiando miembros demo: {e}")
+    print(f"Aviso actualizando esquema: {e}")
+
+cur.execute("SELECT id, full_name, email, sede_id, role FROM members ORDER BY id DESC;")
+rows = cur.fetchall()
+print(f"Miembros actuales en Neon PostgreSQL ({len(rows)}):", rows)
 
 tables_with_sequences = [
     ('members', 'members_id_seq'),

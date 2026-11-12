@@ -63,6 +63,8 @@ ALLOWED_CREATOR_ROLES = {"SUPER_ADMIN", "ADMIN_PRINCIPAL", "ADMIN_SEDE", "ADMIN"
 def _ensure_allowed_modules_column(db: Session):
     try:
         db.execute(text("ALTER TABLE members ADD COLUMN IF NOT EXISTS allowed_modules TEXT;"))
+        db.execute(text("ALTER TABLE users ALTER COLUMN email DROP NOT NULL;"))
+        db.execute(text("ALTER TABLE members DROP CONSTRAINT IF EXISTS fk_members_sede;"))
         db.commit()
     except Exception:
         db.rollback()
@@ -125,7 +127,7 @@ def get_members(sede_id: Optional[str] = Query(None), db: Session = Depends(get_
         _ensure_allowed_modules_column(db)
         query = db.query(models.Member)
         if sede_id and sede_id != "TODAS":
-            query = query.filter(models.Member.sede_id == sede_id)
+            query = query.filter(models.Member.sede_id.in_([sede_id, "TODAS"]))
         db_members = query.order_by(models.Member.id.desc()).all()
 
         # Mapear permisos y username de usuarios
@@ -140,17 +142,26 @@ def get_members(sede_id: Optional[str] = Query(None), db: Session = Depends(get_
             for u in all_users
             if u.email and u.username
         }
+        usernames_by_fullname = {
+            (u.full_name or "").lower(): u.username
+            for u in all_users
+            if u.full_name and u.username
+        }
 
         result = []
         for m in db_members:
             user_perms = users_by_email.get((m.email or "").lower())
             modules_list = _parse_modules(m.allowed_modules or user_perms)
-            resolved_username = usernames_by_email.get((m.email or "").lower()) or generate_username_from_name(m.full_name)
+            resolved_username = (
+                usernames_by_email.get((m.email or "").lower())
+                or usernames_by_fullname.get((m.full_name or "").lower())
+                or generate_username_from_name(m.full_name)
+            )
             result.append({
                 "id": m.id,
                 "full_name": m.full_name,
                 "username": resolved_username,
-                "email": m.email,
+                "email": m.email or "",
                 "phone": m.phone,
                 "sede_id": m.sede_id,
                 "sede_name": m.sede_name,
@@ -230,7 +241,7 @@ def add_member(
         _ensure_allowed_modules_column(db)
         new_db_member = models.Member(
             full_name=req.full_name,
-            email=final_email,
+            email=final_email if final_email else None,
             phone=req.phone or "No registrado",
             sede_id=req.sede_id,
             sede_name=final_sede_name,

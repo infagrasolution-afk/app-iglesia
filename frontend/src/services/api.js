@@ -610,7 +610,7 @@ export const membersAPI = {
       const { getStoredMembers } = await import('../data/membersData');
       const all = getStoredMembers();
       if (sedeId && sedeId !== 'TODAS') {
-        return all.filter(m => m.sede_id === sedeId);
+        return all.filter(m => m.sede_id === sedeId || m.sede_id === 'TODAS');
       }
       return all;
     }
