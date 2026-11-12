@@ -1,1 +1,46 @@
-[]
+[
+  {
+    "id": 1,
+    "full_name": "Pastor Said Carrasquel",
+    "username": "scarrasquel",
+    "email": "scarrasquel@restauracion.org",
+    "phone": "0412-0000001",
+    "phone_encrypted": true,
+    "phone_visible": true,
+    "birth_date": "1975-06-15",
+    "sede_id": "TODAS",
+    "sede_name": "Todas las Sedes (Nacional)",
+    "role": "SUPER_ADMIN",
+    "ministry": "Dirección General / Superadmin",
+    "baptism_status": "Bautizado",
+    "discipleship_status": "Graduado de Fundamentos",
+    "joined_at": "2026-01-01",
+    "created_by": "Superadministrador",
+    "allowed_modules": [
+      "prayers", "members", "discipleship", "emotions", "bible",
+      "sedes", "about", "announcements", "sermons", "donations"
+    ]
+  },
+  {
+    "id": 100,
+    "full_name": "Ing. Luis Infante",
+    "username": "linfante",
+    "email": "linfante@restauracion.org",
+    "phone": "0412-0161906",
+    "phone_encrypted": true,
+    "phone_visible": true,
+    "birth_date": "1990-11-20",
+    "sede_id": "TODAS",
+    "sede_name": "Todas las Sedes (Nacional)",
+    "role": "SUPER_ADMIN",
+    "ministry": "Dirección General / Sistemas",
+    "baptism_status": "Bautizado",
+    "discipleship_status": "Graduado de Fundamentos",
+    "joined_at": "2026-01-01",
+    "created_by": "Superadministrador",
+    "allowed_modules": [
+      "prayers", "members", "discipleship", "emotions", "bible",
+      "sedes", "about", "announcements", "sermons", "donations"
+    ]
+  }
+]

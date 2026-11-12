@@ -91,8 +91,8 @@ export function AuthProvider({ children }) {
     const normalizedKey = (email || '').toLowerCase().trim();
 
     // Check if user is Super Admin (Owner or Pastor Said) or Admin Principal
-    const isOwner = normalizedKey === 'linfante' || normalizedKey === 'linfante@restauracionglobal.org';
-    const isPastorSaid = normalizedKey === 'scarrasquel' || normalizedKey === 'scarrasquel@restauracionglobal.org';
+    const isOwner = normalizedKey === 'linfante' || normalizedKey === 'linfante@restauracionglobal.org' || normalizedKey === 'linfante@restauracion.org';
+    const isPastorSaid = normalizedKey === 'scarrasquel' || normalizedKey === 'scarrasquel@restauracionglobal.org' || normalizedKey === 'scarrasquel@restauracion.org';
     const isGeneralAdmin = normalizedKey === 'admin' || normalizedKey === 'admin@iglesia.org';
     const hasGlobalAccess = isOwner || isPastorSaid || isGeneralAdmin;
 
@@ -147,6 +147,17 @@ export function AuthProvider({ children }) {
           sede: 'TODAS',
           passwordReq: 'aa11..**'
         },
+        'linfante@restauracion.org': {
+          id: 100,
+          username: 'linfante',
+          full_name: 'Ing. L. Infante (Dueño de la App / Super Admin)',
+          name: 'L. Infante',
+          role: 'SUPER_ADMIN',
+          isOwner: true,
+          isSuperAdmin: true,
+          sede: 'TODAS',
+          passwordReq: 'aa11..**'
+        },
 
         // 2. SUPER ADMIN: PASTOR PRINCIPAL GLOBAL (SAID CARRASQUEL)
         'scarrasquel': {
@@ -162,6 +173,18 @@ export function AuthProvider({ children }) {
           passwordReq: 'said1234'
         },
         'scarrasquel@restauracionglobal.org': {
+          id: 1,
+          username: 'scarrasquel',
+          full_name: 'Pastor Said Carrasquel (Pastor Global / Super Admin)',
+          name: 'Pastor Said Carrasquel',
+          role: 'SUPER_ADMIN',
+          isOwner: false,
+          isSuperAdmin: true,
+          isGlobalPastor: true,
+          sede: 'TODAS',
+          passwordReq: 'said1234'
+        },
+        'scarrasquel@restauracion.org': {
           id: 1,
           username: 'scarrasquel',
           full_name: 'Pastor Said Carrasquel (Pastor Global / Super Admin)',

@@ -503,11 +503,14 @@ export default function Members() {
   // Filtered members calculation
   const filteredMembers = useMemo(() => {
     return members.filter((m) => {
+      // Superadmins are global and belong to all sedes (accessible across any sede view)
+      const isMemberGlobal = m.sede_id === 'TODAS' || m.role === 'SUPER_ADMIN' || m.role === 'ADMIN_PRINCIPAL';
+
       // Sede filter
-      if (!canManageAllSedes && user?.sede && m.sede_id !== user.sede && m.sede_id !== 'TODAS') {
+      if (!canManageAllSedes && user?.sede && m.sede_id !== user.sede && !isMemberGlobal) {
         return false;
       }
-      if (canManageAllSedes && selectedSedeFilter !== 'TODAS' && m.sede_id !== selectedSedeFilter && m.sede_id !== 'TODAS') {
+      if (canManageAllSedes && selectedSedeFilter !== 'TODAS' && m.sede_id !== selectedSedeFilter && !isMemberGlobal) {
         return false;
       }
 
@@ -543,10 +546,11 @@ export default function Members() {
   const monthlyBirthdays = useMemo(() => {
     return members
       .filter((m) => {
-        if (!canManageAllSedes && user?.sede && m.sede_id !== user.sede && m.sede_id !== 'TODAS') {
+        const isMemberGlobal = m.sede_id === 'TODAS' || m.role === 'SUPER_ADMIN' || m.role === 'ADMIN_PRINCIPAL';
+        if (!canManageAllSedes && user?.sede && m.sede_id !== user.sede && !isMemberGlobal) {
           return false;
         }
-        if (canManageAllSedes && selectedSedeFilter !== 'TODAS' && m.sede_id !== selectedSedeFilter && m.sede_id !== 'TODAS') {
+        if (canManageAllSedes && selectedSedeFilter !== 'TODAS' && m.sede_id !== selectedSedeFilter && !isMemberGlobal) {
           return false;
         }
         const bInfo = parseBirthDateInfo(m.birth_date);
@@ -970,6 +974,8 @@ export default function Members() {
                 onChange={(e) => setMinistryFilter(e.target.value)}
               >
                 <MenuItem value="ALL">Todos los Ministerios</MenuItem>
+                <MenuItem value="Dirección General / Superadmin">👑 Dirección General (Superadmin)</MenuItem>
+                <MenuItem value="Dirección General / Sistemas">💻 Dirección General (Sistemas)</MenuItem>
                 <MenuItem value="Grupo de Jóvenes & Conexión">Jóvenes / Conexión</MenuItem>
                 <MenuItem value="Protocolo y Bienvenida">Protocolo</MenuItem>
                 <MenuItem value="Consolidación">Consolidación</MenuItem>
@@ -1139,18 +1145,22 @@ export default function Members() {
                               <WhatsAppIcon sx={{ fontSize: 18 }} />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Eliminar miembro">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={async () => {
-                                await membersAPI.delete(member.id);
-                                setMembers((prev) => prev.filter((m) => m.id !== member.id));
-                                setSnackbar({ open: true, message: `Miembro ${member.full_name} eliminado.`, severity: 'info' });
-                              }}
-                            >
-                              <DeleteIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
+                          <Tooltip title={member.role === 'SUPER_ADMIN' || member.id === 1 || member.id === 100 ? 'Los Superadministradores principales no se pueden eliminar' : 'Eliminar miembro'}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                disabled={member.role === 'SUPER_ADMIN' || member.id === 1 || member.id === 100}
+                                onClick={async () => {
+                                  if (member.role === 'SUPER_ADMIN' || member.id === 1 || member.id === 100) return;
+                                  await membersAPI.delete(member.id);
+                                  setMembers((prev) => prev.filter((m) => m.id !== member.id));
+                                  setSnackbar({ open: true, message: `Miembro ${member.full_name} eliminado.`, severity: 'info' });
+                                }}
+                              >
+                                <DeleteIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </span>
                           </Tooltip>
                         </Stack>
                       )}
