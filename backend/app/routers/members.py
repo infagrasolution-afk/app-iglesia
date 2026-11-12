@@ -302,23 +302,16 @@ def add_member(
 
         # Preparar mensaje de bienvenida por WhatsApp con módulos habilitados y enlace de la app
         clean_phone = clean_venezuela_phone(req.phone or "")
-        modules_names_str = ", ".join([MODULE_LABELS.get(m, m) for m in selected_modules])
         email_line = f"📧 Correo: {final_email}\n" if final_email else ""
         whatsapp_message = (
             f"¡Hola, {req.full_name}! 🕊️\n\n"
-            f"Te damos una bendecida bienvenida a la familia de la Iglesia Cristiana Restauración ({final_sede_name}).\n\n"
-            f"Hemos activado tu cuenta de acceso a la plataforma del sistema con las siguientes credenciales:\n"
+            f"Te damos una bendecida bienvenida a la familia de la Iglesia Restauración ({final_sede_name}).\n\n"
+            f"Hemos activado tu cuenta de acceso a la plataforma con las siguientes credenciales:\n"
             f"🌐 Enlace de la App: https://app-iglesia-frontend.onrender.com/\n"
             f"👤 Usuario: {username}\n"
             f"{email_line}"
             f"🔑 Contraseña temporal: {initial_password}\n\n"
-            f"📱 Módulos habilitados en tu cuenta:\n"
-            f"✅ {modules_names_str}\n\n"
-            f"⚠️ Nota de seguridad: Al iniciar sesión por primera vez, el sistema te solicitará obligatoriamente cambiar tu contraseña por una personalizada.\n\n"
-            f"Atentamente,\n"
-            f"Luis Infante (linfante)\n"
-            f"Superadministrador / Sistemas\n"
-            f"📲 WhatsApp remitente: 04120161906"
+            f"⚠️ Nota de seguridad: Al iniciar sesión por primera vez, el sistema te solicitará obligatoriamente cambiar tu contraseña."
         )
         whatsapp_url = f"https://wa.me/{clean_phone}?text={urllib.parse.quote(whatsapp_message)}" if clean_phone else ""
 

@@ -305,9 +305,7 @@ export default function Members() {
           : cleanPhone;
 
         const emailLine = cleanEmail ? `📧 Correo: ${cleanEmail}\n` : '';
-        const defaultMsg = `¡Hola, ${payload.full_name}! 🕊️\n\nTe damos una bendecida bienvenida a la familia de la Iglesia
-        
-        Restauración (${payload.sede_name}).\n\nHemos activado tu cuenta de acceso a la plataforma con las siguientes credenciales:\n🌐 Enlace de la App: https://app-iglesia-frontend.onrender.com/\n👤 Usuario: ${effectiveUser}\n${emailLine}🔑 Contraseña temporal: ${result.credentials?.initial_password || payload.initial_password || '123'}\n\n⚠️ Nota de seguridad: Al iniciar sesión por primera vez, el sistema te solicitará obligatoriamente cambiar tu contraseña.`;
+        const defaultMsg = `¡Hola, ${payload.full_name}! 🕊️\n\nTe damos una bendecida bienvenida a la familia de la Iglesia Restauración (${payload.sede_name}).\n\nHemos activado tu cuenta de acceso a la plataforma con las siguientes credenciales:\n🌐 Enlace de la App: https://app-iglesia-frontend.onrender.com/\n👤 Usuario: ${effectiveUser}\n${emailLine}🔑 Contraseña temporal: ${result.credentials?.initial_password || payload.initial_password || '123'}\n\n⚠️ Nota de seguridad: Al iniciar sesión por primera vez, el sistema te solicitará obligatoriamente cambiar tu contraseña.`;
 
         setWelcomeModalData({
           member: createdMember,
@@ -315,7 +313,7 @@ export default function Members() {
             username: effectiveUser,
             initial_password: payload.initial_password || '123'
           },
-          whatsapp: result.whatsapp || {
+          whatsapp: {
             phone: formattedPhone,
             message: defaultMsg,
             url: formattedPhone ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(defaultMsg)}` : '',
