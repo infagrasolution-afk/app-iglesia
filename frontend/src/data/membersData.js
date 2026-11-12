@@ -110,6 +110,9 @@ export const saveStoredMembers = (members) => {
     LEGACY_KEYS.forEach((k) => localStorage.removeItem(k));
     const merged = mergeSuperAdmins(members);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("restauracion_members_updated", { detail: merged }));
+    }
   } catch (e) {
     console.error("Error saving members to storage:", e);
   }

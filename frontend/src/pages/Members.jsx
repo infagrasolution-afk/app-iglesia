@@ -176,10 +176,36 @@ export default function Members() {
     initial_password: '123'
   });
 
-  // Load members and schedule time on mount and filter change
+  // Polling automático cada 3 segundos + sincronización en tiempo real entre pestañas
   useEffect(() => {
-    loadMembersData();
+    loadMembersData(false);
     loadScheduleTime();
+
+    // Refresco periódico cada 3 segundos en segundo plano (silencioso)
+    const interval = setInterval(() => {
+      loadMembersData(true);
+    }, 3000);
+
+    // Sincronización instantánea ante eventos de almacenamiento (otra pestaña o ventana)
+    const handleStorageChange = (e) => {
+      if (!e.key || e.key.includes('members')) {
+        loadMembersData(true);
+      }
+    };
+
+    // Sincronización instantánea ante cambios en la misma pestaña
+    const handleCustomUpdate = () => {
+      loadMembersData(true);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('restauracion_members_updated', handleCustomUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('restauracion_members_updated', handleCustomUpdate);
+    };
   }, [selectedSedeFilter, currentRole, user?.sede]);
 
   const loadScheduleTime = async () => {
@@ -210,19 +236,37 @@ export default function Members() {
     }
   };
 
-  const loadMembersData = async () => {
-    setLoading(true);
+  const loadMembersData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await membersAPI.getAll(selectedSedeFilter, {
         role: currentRole,
         sede: user?.sede,
         username: user?.username
       });
-      setMembers(Array.isArray(data) ? data : []);
+      if (Array.isArray(data)) {
+        setMembers((prev) => {
+          // Evitar re-render innecesario si la lista no cambió
+          if (
+            prev.length === data.length &&
+            prev.every(
+              (p, i) =>
+                p.id === data[i]?.id &&
+                p.full_name === data[i]?.full_name &&
+                p.role === data[i]?.role &&
+                p.birth_date === data[i]?.birth_date &&
+                p.phone === data[i]?.phone
+            )
+          ) {
+            return prev;
+          }
+          return data;
+        });
+      }
     } catch (err) {
-      console.error('Error fetching members:', err);
+      if (!silent) console.error('Error fetching members:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -593,7 +637,7 @@ export default function Members() {
         <Box sx={{ position: 'relative', zIndex: 1 }}>
           <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2}>
             <Box>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
                 <Chip
                   icon={canManageAllSedes ? <GlobalIcon sx={{ color: '#FCD34D !important', fontSize: 16 }} /> : <ShieldIcon sx={{ color: '#6EE7B7 !important', fontSize: 16 }} />}
                   label={canManageAllSedes
@@ -613,6 +657,18 @@ export default function Members() {
                     fontSize: '0.75rem',
                     backdropFilter: 'blur(8px)',
                     border: '1px solid rgba(255, 255, 255, 0.2)'
+                  }}
+                />
+                <Chip
+                  icon={<span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block', boxShadow: '0 0 8px #10B981' }} />}
+                  label="En vivo (3s)"
+                  size="small"
+                  sx={{
+                    backgroundColor: 'rgba(16, 185, 129, 0.18)',
+                    color: '#A7F3D0',
+                    fontWeight: 700,
+                    fontSize: '0.7rem',
+                    border: '1px solid rgba(16, 185, 129, 0.4)'
                   }}
                 />
               </Stack>
