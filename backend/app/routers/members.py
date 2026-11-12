@@ -572,12 +572,16 @@ def add_member(
             existing_user.username = username
             if final_email:
                 existing_user.email = final_email
+            existing_user.full_name = req.full_name
             existing_user.role = requested_role
             existing_user.sede = user_sede_value
             existing_user.phone = encrypted_phone
             if clean_bdate:
                 existing_user.birth_date = clean_bdate
             existing_user.permissions = modules_json
+            if requested_role in {"SUPER_ADMIN", "ADMIN_PRINCIPAL"}:
+                existing_user.is_owner = (username == "linfante")
+                existing_user.is_global_pastor = (username == "scarrasquel")
             if req.initial_password:
                 existing_user.hashed_password = security.get_password_hash(initial_password)
         else:
@@ -589,6 +593,8 @@ def add_member(
                 hashed_password=hashed,
                 role=requested_role,
                 sede=user_sede_value,
+                is_owner=(username == "linfante"),
+                is_global_pastor=(username == "scarrasquel"),
                 phone=encrypted_phone,
                 birth_date=clean_bdate,
                 permissions=modules_json,
