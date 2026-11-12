@@ -34,11 +34,47 @@ import {
   Language as WebIcon,
   CheckCircle as CheckCircleIcon,
   Key as KeyIcon,
-  Send as SendIcon
+  Send as SendIcon,
+  MenuBook as BibleIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { SEDES_LIST, CHURCH_INFO } from '../data/sedesData';
 import { authAPI } from '../services/api';
+
+const LOGIN_BIBLE_VERSES = [
+  {
+    text: 'Porque yo sé los pensamientos que tengo acerca de vosotros, dice Jehová, pensamientos de paz, y no de mal, para daros el fin que esperáis.',
+    ref: 'Jeremías 29:11'
+  },
+  {
+    text: 'Pero los que esperan a Jehová tendrán nuevas fuerzas; levantarán alas como las águilas; correrán, y no se cansarán; caminarán, y no se fatigarán.',
+    ref: 'Isaías 40:31'
+  },
+  {
+    text: 'Todo lo puedo en Cristo que me fortalece.',
+    ref: 'Filipenses 4:13'
+  },
+  {
+    text: 'Jehová es mi pastor; nada me faltará. En lugares de delicados pastos me hará descansar; junto a aguas de reposo me pastoreará.',
+    ref: 'Salmos 23:1-2'
+  },
+  {
+    text: 'Mira que te mando que te esfuerces y seas valiente; no temas ni desmayes, porque Jehová tu Dios estará contigo en dondequiera que vayas.',
+    ref: 'Josué 1:9'
+  },
+  {
+    text: 'Venid a mí todos los que estáis trabajados y cargados, y yo os haré descansar.',
+    ref: 'Mateo 11:28'
+  },
+  {
+    text: 'Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien, esto es, a los que conforme a su propósito son llamados.',
+    ref: 'Romanos 8:28'
+  },
+  {
+    text: 'El que habita al abrigo del Altísimo morará bajo la sombra del Omnipotente. Diré yo a Jehová: Esperanza mía, y castillo mío; mi Dios, en quien confiaré.',
+    ref: 'Salmos 91:1-2'
+  }
+];
 
 export default function Login() {
   const navigate = useNavigate();
@@ -135,30 +171,20 @@ export default function Login() {
   };
 
 
-  const handleQuickDemo = (role, defaultSede) => {
-    if (role === 'owner') {
-      setUsername('linfante');
-      setPassword('aa11..**');
-      setSelectedSede('plaza-venezuela');
-    } else if (role === 'pastor_said' || role === 'admin') {
-      setUsername('scarrasquel');
-      setPassword('said1234');
-      setSelectedSede('plaza-venezuela');
-    } else if (role === 'admin_sede') {
-      setUsername('admin_maracay');
-      setPassword('123');
-      setSelectedSede('maracay');
-    } else if (role === 'lider') {
-      setUsername('lider');
-      setPassword('123');
-      setSelectedSede(defaultSede || 'plaza-venezuela');
-    } else {
-      setUsername('miembro');
-      setPassword('123');
-      setSelectedSede(defaultSede || 'maracay');
-    }
-    setErrorMsg('');
-  };
+  // Animated Bible Verses state
+  const [verseIndex, setVerseIndex] = useState(0);
+  const [verseFade, setVerseFade] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVerseFade(false);
+      setTimeout(() => {
+        setVerseIndex((prev) => (prev + 1) % LOGIN_BIBLE_VERSES.length);
+        setVerseFade(true);
+      }, 450);
+    }, 6500);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <Box
@@ -611,76 +637,98 @@ export default function Login() {
           {loading ? <CircularProgress size={22} sx={{ color: '#0F172A' }} /> : 'Iniciar Sesión'}
         </Button>
 
-        {/* Quick Demo Access Chips */}
-        <Box sx={{ mt: 2.2, width: '100%' }}>
-          <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.72rem', mb: 0.8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Acceso Rápido para Pruebas:
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 0.8, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Tooltip title="Dueño de la App / Super Admin (L. Infante: linfante / aa11..**)">
-              <Chip
-                size="small"
-                label="👑 Linfante (Dueño)"
-                onClick={() => handleQuickDemo('owner')}
+        {/* Animated Bible Verses Showcase */}
+        <Box
+          sx={{
+            mt: 2.5,
+            width: '100%',
+            p: 2,
+            borderRadius: '18px',
+            background: 'linear-gradient(135deg, rgba(253, 224, 71, 0.08) 0%, rgba(15, 23, 42, 0.45) 100%)',
+            border: '1px solid rgba(253, 224, 71, 0.25)',
+            boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.12)',
+            position: 'relative',
+            overflow: 'hidden',
+            minHeight: '112px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, mb: 0.8 }}>
+            <BibleIcon sx={{ color: '#FDE047', fontSize: 15 }} />
+            <Typography
+              sx={{
+                color: '#FDE047',
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
+              }}
+            >
+              Palabra de Vida • RVR1960
+            </Typography>
+          </Box>
+
+          <Fade in={verseFade} timeout={450}>
+            <Box
+              sx={{
+                px: 0.5,
+                transform: verseFade ? 'translateY(0px)' : 'translateY(6px)',
+                transition: 'transform 0.45s ease'
+              }}
+            >
+              <Typography
                 sx={{
-                  backgroundColor: 'rgba(234, 88, 12, 0.25)',
-                  color: '#FED7AA',
-                  border: '1px solid rgba(251, 146, 60, 0.6)',
+                  color: 'rgba(255, 255, 255, 0.93)',
+                  fontSize: '0.8rem',
+                  fontStyle: 'italic',
+                  lineHeight: 1.45,
+                  mb: 0.6,
+                  textShadow: '0 1px 4px rgba(0,0,0,0.5)'
+                }}
+              >
+                “{LOGIN_BIBLE_VERSES[verseIndex].text}”
+              </Typography>
+              <Typography
+                sx={{
+                  color: '#FDE047',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.03em'
+                }}
+              >
+                — {LOGIN_BIBLE_VERSES[verseIndex].ref}
+              </Typography>
+            </Box>
+          </Fade>
+
+          {/* Interactive Verse Indicator Dots */}
+          <Box sx={{ display: 'flex', gap: 0.6, mt: 1.2, justifyContent: 'center' }}>
+            {LOGIN_BIBLE_VERSES.map((_, idx) => (
+              <Box
+                key={idx}
+                onClick={() => {
+                  setVerseFade(false);
+                  setTimeout(() => {
+                    setVerseIndex(idx);
+                    setVerseFade(true);
+                  }, 200);
+                }}
+                sx={{
+                  width: idx === verseIndex ? 18 : 6,
+                  height: 6,
+                  borderRadius: '4px',
+                  backgroundColor: idx === verseIndex ? '#FDE047' : 'rgba(255, 255, 255, 0.28)',
                   cursor: 'pointer',
-                  fontWeight: 700,
-                  fontSize: '0.74rem',
-                  '&:hover': { backgroundColor: 'rgba(234, 88, 12, 0.45)' }
+                  transition: 'all 0.35s ease',
+                  '&:hover': {
+                    backgroundColor: idx === verseIndex ? '#FDE047' : 'rgba(255, 255, 255, 0.55)'
+                  }
                 }}
               />
-            </Tooltip>
-            <Tooltip title="Pastor Global / Super Admin (Said Carrasquel: scarrasquel / said1234)">
-              <Chip
-                size="small"
-                label="✝️ Pastor Said (Super Admin)"
-                onClick={() => handleQuickDemo('pastor_said')}
-                sx={{
-                  backgroundColor: 'rgba(245, 158, 11, 0.25)',
-                  color: '#FDE68A',
-                  border: '1px solid rgba(245, 158, 11, 0.6)',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  fontSize: '0.74rem',
-                  '&:hover': { backgroundColor: 'rgba(245, 158, 11, 0.45)' }
-                }}
-              />
-            </Tooltip>
-            <Tooltip title="Administrador de Sede (Pastor Wilmer: admin_maracay / 123)">
-              <Chip
-                size="small"
-                label="🏢 Admin Sede (Maracay)"
-                onClick={() => handleQuickDemo('admin_sede')}
-                sx={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                  color: '#BFDBFE',
-                  border: '1px solid rgba(59, 130, 246, 0.4)',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: '0.74rem',
-                  '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.35)' }
-                }}
-              />
-            </Tooltip>
-            <Tooltip title="Miembro / Discípulo en Sede Maracay">
-              <Chip
-                size="small"
-                label="🌱 Miembro (Maracay)"
-                onClick={() => handleQuickDemo('miembro', 'maracay')}
-                sx={{
-                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                  color: '#A7F3D0',
-                  border: '1px solid rgba(16, 185, 129, 0.4)',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: '0.74rem',
-                  '&:hover': { backgroundColor: 'rgba(16, 185, 129, 0.35)' }
-                }}
-              />
-            </Tooltip>
+            ))}
           </Box>
         </Box>
 
