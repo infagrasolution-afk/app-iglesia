@@ -176,6 +176,33 @@ export default function AppLayout({ children }) {
     }
   };
 
+  const handleDrawerToggle = () => {
+    setMobileOpen((prev) => !prev);
+  };
+
+  const handleRoleMenuOpen = (event) => {
+    setRoleAnchorEl(event.currentTarget);
+  };
+
+  const handleRoleMenuClose = (newRole) => {
+    setRoleAnchorEl(null);
+    if (newRole && setRole) {
+      setRole(newRole);
+    }
+  };
+
+  const handleSedeMenuOpen = (event) => {
+    if (isAdmin) {
+      setSedeAnchorEl(event.currentTarget);
+    }
+  };
+
+  const handleSedeMenuClose = (sedeId) => {
+    setSedeAnchorEl(null);
+    if (sedeId && setCurrentSede) {
+      setCurrentSede(sedeId);
+    }
+  };
 
   // Filter navigation items according to the modules allowed for this user
   const visibleNavItems = NAV_ITEMS.filter((item) => canViewModule(item.path));
