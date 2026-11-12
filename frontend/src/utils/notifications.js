@@ -66,6 +66,21 @@ export async function requestAppNotificationPermission() {
   try {
     const result = await Notification.requestPermission();
     if (result === 'granted') {
+      // Registrar sincronización periódica en segundo plano (para cuando la app esté cerrada en el móvil)
+      try {
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.ready;
+          if (reg && 'periodicSync' in reg) {
+            await reg.periodicSync.register('restauracion-bg-check', {
+              minInterval: 30 * 60 * 1000
+            });
+          }
+          if (reg && 'sync' in reg) {
+            await reg.sync.register('restauracion-bg-check');
+          }
+        }
+      } catch {}
+
       await sendDeviceNotification({
         title: '🔔 ¡Notificaciones Activadas!',
         body: 'Recibirás alertas con sonido y vibración cuando haya cumpleaños, nuevos anuncios, oraciones o sermones en la Iglesia Restauración.',
