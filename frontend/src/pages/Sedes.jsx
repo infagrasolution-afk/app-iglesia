@@ -286,7 +286,17 @@ export default function Sedes() {
               border: '1px solid rgba(253, 224, 71, 0.3)'
             }}
           />
-          <Typography variant="h3" sx={{ fontWeight: 800, fontSize: { xs: '1.8rem', sm: '2.5rem' }, mb: 1, letterSpacing: '-0.02em' }}>
+          <Typography
+            variant="h3"
+            sx={{
+              color: '#FFFFFF',
+              fontWeight: 800,
+              fontSize: { xs: '1.8rem', sm: '2.5rem' },
+              mb: 1,
+              letterSpacing: '-0.02em',
+              textShadow: '0 2px 12px rgba(0, 0, 0, 0.35)'
+            }}
+          >
             Nuestras Sedes
           </Typography>
           <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.82)', maxWidth: '750px', fontSize: { xs: '0.92rem', sm: '1.05rem' }, lineHeight: 1.6 }}>
@@ -447,7 +457,16 @@ export default function Sedes() {
                         backdropFilter: 'blur(8px)'
                       }}
                     />
-                    <Typography variant="h5" sx={{ fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.01em' }}>
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        color: '#FFFFFF',
+                        fontWeight: 800,
+                        fontSize: '1.25rem',
+                        letterSpacing: '-0.01em',
+                        textShadow: '0 1px 8px rgba(0, 0, 0, 0.35)'
+                      }}
+                    >
                       {sede.name}
                     </Typography>
                     <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>

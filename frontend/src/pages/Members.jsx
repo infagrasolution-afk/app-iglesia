@@ -407,7 +407,7 @@ export default function Members() {
                   }}
                 />
               </Stack>
-              <Typography variant="h4" sx={{ fontWeight: 800, fontSize: { xs: '1.5rem', md: '2rem' }, lineHeight: 1.2 }}>
+              <Typography variant="h4" sx={{ color: '#FFFFFF', fontWeight: 800, fontSize: { xs: '1.5rem', md: '2rem' }, lineHeight: 1.2 }}>
                 Directorio de Miembros
               </Typography>
               <Typography variant="body2" sx={{ color: '#E2E8F0', mt: 0.8, maxWidth: 680 }}>

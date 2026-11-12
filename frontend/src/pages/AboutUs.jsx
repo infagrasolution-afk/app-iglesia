@@ -57,7 +57,17 @@ export default function AboutUs() {
             border: '1px solid rgba(255, 255, 255, 0.2)'
           }}
         />
-        <Typography variant="h3" sx={{ fontWeight: 800, fontSize: { xs: '2rem', sm: '2.8rem' }, mb: 1, letterSpacing: '-0.02em' }}>
+        <Typography
+          variant="h3"
+          sx={{
+            color: '#FFFFFF',
+            fontWeight: 800,
+            fontSize: { xs: '2rem', sm: '2.8rem' },
+            mb: 1,
+            letterSpacing: '-0.02em',
+            textShadow: '0 2px 12px rgba(0, 0, 0, 0.35)'
+          }}
+        >
           {CHURCH_INFO.name}
         </Typography>
         <Typography variant="h6" sx={{ color: '#FDE047', fontWeight: 600, fontStyle: 'italic', mb: 2, fontSize: { xs: '1rem', sm: '1.2rem' } }}>
