@@ -58,12 +58,22 @@ import {
   Key as KeyIcon,
   CheckCircle as CheckCircleIcon,
   Cake as CakeIcon,
+  NotificationsActive as NotificationsActiveIcon,
+  NotificationsNone as NotificationsIcon,
+  VolumeUp as VolumeUpIcon,
   Visibility,
   VisibilityOff
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { SEDES_LIST, ALL_SEDES_OPTION, CHURCH_INFO } from '../../data/sedesData';
-import { authAPI } from '../../services/api';
+import { authAPI, membersAPI, announcementAPI, prayerAPI, sermonAPI } from '../../services/api';
+import {
+  getNotificationPermission,
+  requestAppNotificationPermission,
+  sendDeviceNotification,
+  getSavedNotifications,
+  markAllNotificationsRead
+} from '../../utils/notifications';
 
 const DRAWER_WIDTH = 260;
 
@@ -122,45 +132,203 @@ export default function AppLayout({ children }) {
   // Birthday Celebration Popup for the Logged-in Birthday Member
   const [birthdayPopup, setBirthdayPopup] = useState(null);
 
+  // Device Notifications State & Center
+  const [notifPermission, setNotifPermission] = useState(() => getNotificationPermission());
+  const [notifAnchorEl, setNotifAnchorEl] = useState(null);
+  const [notificationsList, setNotificationsList] = useState(() => getSavedNotifications());
+  const [notifPromptDismissed, setNotifPromptDismissed] = useState(false);
+
+  useEffect(() => {
+    const syncHandler = (e) => {
+      setNotificationsList(e.detail || getSavedNotifications());
+    };
+    window.addEventListener('restauracion-notifications-updated', syncHandler);
+    return () => window.removeEventListener('restauracion-notifications-updated', syncHandler);
+  }, []);
+
+  const handleEnableNotifications = async () => {
+    const perm = await requestAppNotificationPermission();
+    setNotifPermission(perm);
+    if (perm === 'granted') {
+      setPassSuccessMsg('🔔 ¡Notificaciones, sonido y vibración activados en este equipo!');
+    }
+  };
+
+  // Monitor automático de Cumpleaños del día y Nuevas Publicaciones (Anuncios, Oraciones, Sermones) para TODOS los usuarios
   useEffect(() => {
     if (!user) return;
-    const now = new Date();
-    const todayKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-    const userKey = (user.username || user.full_name || 'user').toLowerCase().trim();
-    const dismissedKey = `restauracion_bday_seen_${userKey}_${todayKey}`;
-    if (sessionStorage.getItem(dismissedKey)) return;
+    let isMounted = true;
 
-    // 1. Verificar si hoy es el cumpleaños según user.birth_date (YYYY-MM-DD)
-    let isUserBirthdayToday = false;
-    if (user.birth_date && typeof user.birth_date === 'string') {
-      const parts = user.birth_date.trim().split('T')[0].split('-');
-      if (parts.length === 3) {
-        const bMonth = parseInt(parts[1], 10);
-        const bDay = parseInt(parts[2], 10);
-        if (bMonth === (now.getMonth() + 1) && bDay === now.getDate()) {
-          isUserBirthdayToday = true;
+    const checkEventsAndNotify = async () => {
+      try {
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+
+        // 1. Notificar a TODOS a partir de las 5:00 AM cuando alguien esté de cumpleaños hoy
+        if (now.getHours() >= 5) {
+          const bdayData = await membersAPI.getBirthdays(now.getMonth() + 1, 'TODAS');
+          const todaysBirthdays = Array.isArray(bdayData?.birthdays)
+            ? bdayData.birthdays.filter((b) => b.is_today)
+            : [];
+
+          for (const bPerson of todaysBirthdays) {
+            const notifiedKey = `restauracion_notified_bday_5am_${bPerson.id}_${todayStr}`;
+            if (!localStorage.getItem(notifiedKey)) {
+              localStorage.setItem(notifiedKey, '1');
+              const isMe =
+                (user?.full_name && bPerson.full_name && user.full_name.toLowerCase() === bPerson.full_name.toLowerCase()) ||
+                (user?.id && bPerson.id === user.id);
+
+              await sendDeviceNotification({
+                title: isMe
+                  ? `🎂 ¡Feliz Cumpleaños, ${bPerson.full_name}! (Iglesia Restauración)`
+                  : `🎂 ¡Hoy está de cumpleaños ${bPerson.full_name}!`,
+                body: isMe
+                  ? `¡Toda la familia de la Iglesia Restauración (${bPerson.sede_name || bPerson.sede_id}) te bendice en tu cumpleaños! «Jehová te bendiga, y te guarde» (Números 6:24-26).`
+                  : `La familia de la Iglesia Restauración (${bPerson.sede_name || bPerson.sede_id}) celebra hoy la vida de ${bPerson.full_name}. ¡Envíale tus felicitaciones!`,
+                tag: `bday-5am-${bPerson.id}-${todayStr}`,
+                url: '/members',
+                type: 'birthday'
+              });
+            }
+          }
+        }
+
+        // 2. Detectar nuevos Anuncios publicados
+        const anns = await announcementAPI.getAll('TODAS');
+        if (Array.isArray(anns) && anns.length > 0) {
+          const seenAnnsRaw = localStorage.getItem('restauracion_seen_ann_ids');
+          const currentIds = anns.map((a) => a.id);
+          if (!seenAnnsRaw) {
+            localStorage.setItem('restauracion_seen_ann_ids', JSON.stringify(currentIds));
+          } else {
+            const seenIds = JSON.parse(seenAnnsRaw);
+            const newAnns = anns.filter((a) => !seenIds.includes(a.id));
+            if (newAnns.length > 0) {
+              localStorage.setItem('restauracion_seen_ann_ids', JSON.stringify([...new Set([...seenIds, ...currentIds])]));
+              for (const na of newAnns.slice(0, 2)) {
+                await sendDeviceNotification({
+                  title: `📢 Nuevo en Iglesia Restauración: ${na.title}`,
+                  body: (na.content || '').slice(0, 120),
+                  tag: `ann-${na.id}`,
+                  url: '/announcements',
+                  type: 'announcement'
+                });
+              }
+            }
+          }
+        }
+
+        // 3. Detectar nuevas Peticiones de Oración
+        const prayers = await prayerAPI.getAll('all', currentRole, 'TODAS');
+        if (Array.isArray(prayers) && prayers.length > 0) {
+          const seenPrayersRaw = localStorage.getItem('restauracion_seen_prayer_ids');
+          const currentPIds = prayers.map((p) => p.id);
+          if (!seenPrayersRaw) {
+            localStorage.setItem('restauracion_seen_prayer_ids', JSON.stringify(currentPIds));
+          } else {
+            const seenPIds = JSON.parse(seenPrayersRaw);
+            const newPrayers = prayers.filter((p) => !seenPIds.includes(p.id));
+            if (newPrayers.length > 0) {
+              localStorage.setItem('restauracion_seen_prayer_ids', JSON.stringify([...new Set([...seenPIds, ...currentPIds])]));
+              for (const np of newPrayers.slice(0, 2)) {
+                await sendDeviceNotification({
+                  title: `🙏 Nueva Petición de Oración: ${np.title}`,
+                  body: `${np.author_name || 'Un hermano(a)'} ha compartido una petición en el Muro de Oración.`,
+                  tag: `prayer-${np.id}`,
+                  url: '/prayers',
+                  type: 'prayer'
+                });
+              }
+            }
+          }
+        }
+
+        // 4. Detectar nuevos Sermones publicados
+        const sermons = await sermonAPI.getAll('TODAS');
+        if (Array.isArray(sermons) && sermons.length > 0) {
+          const seenSermonsRaw = localStorage.getItem('restauracion_seen_sermon_ids');
+          const currentSIds = sermons.map((s) => s.id);
+          if (!seenSermonsRaw) {
+            localStorage.setItem('restauracion_seen_sermon_ids', JSON.stringify(currentSIds));
+          } else {
+            const seenSIds = JSON.parse(seenSermonsRaw);
+            const newSermons = sermons.filter((s) => !seenSIds.includes(s.id));
+            if (newSermons.length > 0) {
+              localStorage.setItem('restauracion_seen_sermon_ids', JSON.stringify([...new Set([...seenSIds, ...currentSIds])]));
+              for (const ns of newSermons.slice(0, 2)) {
+                await sendDeviceNotification({
+                  title: `🎧 Nuevo Sermón Publicado: ${ns.title}`,
+                  body: `Predicador: ${ns.speaker || 'Iglesia Restauración'} — ${ns.series || ''}`,
+                  tag: `sermon-${ns.id}`,
+                  url: '/sermons',
+                  type: 'sermon'
+                });
+              }
+            }
+          }
+        }
+      } catch {}
+    };
+
+    checkEventsAndNotify();
+    const intervalId = setInterval(() => {
+      if (isMounted) checkEventsAndNotify();
+    }, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [user, currentRole]);
+
+  useEffect(() => {
+    if (!user) return;
+    let timer5am = null;
+
+    const triggerBirthdayPopupAt5AM = () => {
+      const now = new Date();
+      // El envío automático al cumpleañero del día se realiza a partir de las 5:00 AM
+      let customGreeting = null;
+      const userKey = (user.username || user.full_name || 'user').toLowerCase().trim();
+      try {
+        const stored = JSON.parse(localStorage.getItem('restauracion_bday_greetings') || '{}');
+        if (stored[userKey]) {
+          customGreeting = stored[userKey];
+        }
+      } catch {}
+
+      if (now.getHours() < 5 && !customGreeting) {
+        // Programar disparo exacto a las 5:00:00 AM de hoy
+        const fiveAM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 0, 0, 0);
+        const msUntil5AM = fiveAM.getTime() - now.getTime();
+        if (msUntil5AM > 0) {
+          timer5am = setTimeout(triggerBirthdayPopupAt5AM, msUntil5AM + 500);
+        }
+        return;
+      }
+
+      const todayKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+      const dismissedKey = `restauracion_bday_seen_${userKey}_${todayKey}`;
+      if (sessionStorage.getItem(dismissedKey)) return;
+
+      // 1. Verificar si hoy es el cumpleaños según user.birth_date (YYYY-MM-DD)
+      let isUserBirthdayToday = false;
+      if (user.birth_date && typeof user.birth_date === 'string') {
+        const parts = user.birth_date.trim().split('T')[0].split('-');
+        if (parts.length === 3) {
+          const bMonth = parseInt(parts[1], 10);
+          const bDay = parseInt(parts[2], 10);
+          if (bMonth === (now.getMonth() + 1) && bDay === now.getDate()) {
+            isUserBirthdayToday = true;
+          }
         }
       }
-    }
 
-    // 2. O si la iglesia le envió una felicitación directa
-    let customGreeting = null;
-    try {
-      const stored = JSON.parse(localStorage.getItem('restauracion_bday_greetings') || '{}');
-      if (stored[userKey]) {
-        customGreeting = stored[userKey];
-      }
-    } catch {}
-
-    if (isUserBirthdayToday || customGreeting) {
-      const displayName = user.full_name || user.name || user.username || 'Hermano(a)';
-      const sedeLabel = activeSedeDetails?.name || user.sede || 'Iglesia Restauración';
-      setBirthdayPopup({
-        full_name: displayName,
-        sede_name: sedeLabel,
-        dismissedKey,
-        userKey,
-        message:
+      if (isUserBirthdayToday || customGreeting) {
+        const displayName = user.full_name || user.name || user.username || 'Hermano(a)';
+        const sedeLabel = activeSedeDetails?.name || user.sede || 'Iglesia Restauración';
+        const fullMsg =
           customGreeting?.message ||
           `🎂 ¡Feliz y bendecido cumpleaños, ${displayName}! 🎉🕊️\n\n` +
             `En nombre de toda la familia pastoral y congregacional de la Iglesia Restauración (${sedeLabel}), ` +
@@ -169,9 +337,31 @@ export default function AppLayout({ children }) {
             `Jehová alce sobre ti su rostro, y ponga en ti paz.» (Números 6:24-26)\n\n` +
             `¡Que el Señor conceda las peticiones de tu corazón en este nuevo año de vida! 🙌✨\n` +
             `Con amor en Cristo,\n` +
-            `Iglesia Restauración`
-      });
-    }
+            `Iglesia Restauración`;
+
+        // Disparar notificación con sonido y vibración para el cumpleañero
+        sendDeviceNotification({
+          title: `🎂 ¡Feliz Cumpleaños, ${displayName}! 🎉`,
+          body: `Felicitación automática de las 5:00 AM de parte de la Iglesia Restauración (${sedeLabel}).`,
+          tag: `personal-bday-5am-${userKey}-${todayKey}`,
+          url: '/',
+          type: 'birthday'
+        });
+
+        setBirthdayPopup({
+          full_name: displayName,
+          sede_name: sedeLabel,
+          dismissedKey,
+          userKey,
+          message: fullMsg
+        });
+      }
+    };
+
+    triggerBirthdayPopupAt5AM();
+    return () => {
+      if (timer5am) clearTimeout(timer5am);
+    };
   }, [user, activeSedeDetails]);
 
   const loadResetRequests = async () => {
@@ -531,6 +721,147 @@ export default function AppLayout({ children }) {
               </Tooltip>
             )}
 
+            {/* Notification Center & Device Permission Bell */}
+            <Tooltip title="Notificaciones de la App (Sonido y Vibración)">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  setNotifAnchorEl(e.currentTarget);
+                  markAllNotificationsRead();
+                }}
+                sx={{
+                  color: '#FFFFFF',
+                  backgroundColor: notifPermission === 'granted' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(245, 158, 11, 0.2)',
+                  border: notifPermission === 'granted' ? '1px solid rgba(16, 185, 129, 0.45)' : '1px solid rgba(252, 211, 77, 0.5)',
+                  '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
+                }}
+              >
+                <Badge
+                  badgeContent={notificationsList.filter((n) => !n.read).length}
+                  color="error"
+                >
+                  {notifPermission === 'granted' ? (
+                    <NotificationsActiveIcon fontSize="small" sx={{ color: '#6EE7B7' }} />
+                  ) : (
+                    <NotificationsIcon fontSize="small" sx={{ color: '#FCD34D' }} />
+                  )}
+                </Badge>
+              </IconButton>
+            </Tooltip>
+
+            {/* Notifications Dropdown Menu */}
+            <Menu
+              anchorEl={notifAnchorEl}
+              open={Boolean(notifAnchorEl)}
+              onClose={() => setNotifAnchorEl(null)}
+              PaperProps={{
+                sx: {
+                  width: 330,
+                  maxWidth: '92vw',
+                  mt: 1,
+                  p: 1,
+                  borderRadius: '16px',
+                  boxShadow: '0 15px 40px rgba(0,0,0,0.22)'
+                }
+              }}
+            >
+              <Box sx={{ px: 1.5, py: 1 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography sx={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
+                    🔔 Notificaciones y Alertas
+                  </Typography>
+                  <Chip
+                    label={notifPermission === 'granted' ? 'Activas' : 'Por activar'}
+                    size="small"
+                    color={notifPermission === 'granted' ? 'success' : 'warning'}
+                    sx={{ height: 20, fontSize: '0.68rem', fontWeight: 800 }}
+                  />
+                </Stack>
+                <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mt: 0.3 }}>
+                  Cumpleaños (automático 5:00 AM), anuncios, peticiones y sermones con sonido y vibración.
+                </Typography>
+
+                <Stack direction="row" spacing={1} sx={{ mt: 1.2 }}>
+                  {notifPermission !== 'granted' && (
+                    <Button
+                      size="small"
+                      variant="contained"
+                      fullWidth
+                      onClick={handleEnableNotifications}
+                      sx={{
+                        borderRadius: '50px',
+                        textTransform: 'none',
+                        fontWeight: 800,
+                        backgroundColor: '#D97706',
+                        fontSize: '0.75rem',
+                        '&:hover': { backgroundColor: '#B45309' }
+                      }}
+                    >
+                      🔔 Permitir en este Equipo
+                    </Button>
+                  )}
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    fullWidth
+                    startIcon={<VolumeUpIcon sx={{ fontSize: 15 }} />}
+                    onClick={() => {
+                      sendDeviceNotification({
+                        title: '🔔 Prueba de Notificación — Iglesia Restauración',
+                        body: '¡Tu teléfono está configurado para sonar y vibrar con las notificaciones de la iglesia!',
+                        tag: `test-${Date.now()}`,
+                        url: location.pathname
+                      });
+                    }}
+                    sx={{
+                      borderRadius: '50px',
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.74rem'
+                    }}
+                  >
+                    Probar Sonido / Vibrar
+                  </Button>
+                </Stack>
+              </Box>
+              <Divider sx={{ my: 0.8 }} />
+              {notificationsList.length === 0 ? (
+                <Box sx={{ p: 2, textAlign: 'center' }}>
+                  <Typography variant="caption" sx={{ color: '#64748B' }}>
+                    No hay notificaciones recientes todavía.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box sx={{ maxHeight: 260, overflowY: 'auto' }}>
+                  {notificationsList.slice(0, 10).map((n) => (
+                    <MenuItem
+                      key={n.id}
+                      onClick={() => {
+                        setNotifAnchorEl(null);
+                        if (n.url) navigate(n.url);
+                      }}
+                      sx={{
+                        whiteSpace: 'normal',
+                        alignItems: 'flex-start',
+                        py: 1,
+                        borderRadius: '10px',
+                        mb: 0.4
+                      }}
+                    >
+                      <Box>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.8rem', color: '#0F172A' }}>
+                          {n.title}
+                        </Typography>
+                        <Typography sx={{ fontSize: '0.73rem', color: '#475569', mt: 0.2 }}>
+                          {n.body}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Box>
+              )}
+            </Menu>
+
             {/* Role Menu Trigger */}
             <Tooltip title="Cambiar Rol de Usuario">
               <Chip
@@ -648,6 +979,62 @@ export default function AppLayout({ children }) {
         }}
       >
         <Container maxWidth="xl" disableGutters sx={{ overflowX: 'hidden' }}>
+          {notifPermission !== 'granted' && !notifPromptDismissed && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 1.5, sm: 2 },
+                mb: 2.5,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 60%, #83050B 100%)',
+                color: '#FFFFFF',
+                border: '1px solid rgba(252, 211, 77, 0.4)',
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                justifyContent: 'space-between',
+                gap: 1.5
+              }}
+            >
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <NotificationsActiveIcon sx={{ color: '#FCD34D', fontSize: 28 }} />
+                <Box>
+                  <Typography sx={{ fontWeight: 800, fontSize: '0.92rem', color: '#FFFFFF' }}>
+                    🔔 Activa las Notificaciones con Sonido y Vibración en tu Equipo
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#E2E8F0', display: 'block' }}>
+                    Recibe alertas automáticas cuando alguien esté de cumpleaños (envío 5:00 AM) o se publique un nuevo anuncio, petición o sermón.
+                  </Typography>
+                </Box>
+              </Stack>
+              <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={handleEnableNotifications}
+                  sx={{
+                    backgroundColor: '#F59E0B',
+                    color: '#0F172A',
+                    fontWeight: 800,
+                    textTransform: 'none',
+                    borderRadius: '50px',
+                    px: 2.2,
+                    flexGrow: { xs: 1, sm: 0 },
+                    '&:hover': { backgroundColor: '#FBBF24' }
+                  }}
+                >
+                  Permitir Notificaciones
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => setNotifPromptDismissed(true)}
+                  sx={{ color: '#CBD5E1', textTransform: 'none', fontSize: '0.75rem' }}
+                >
+                  Ahora no
+                </Button>
+              </Stack>
+            </Paper>
+          )}
           {children}
         </Container>
       </Box>

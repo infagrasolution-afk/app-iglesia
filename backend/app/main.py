@@ -1,16 +1,36 @@
+import threading
+import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from sqlalchemy import text
-from app.database import engine
+from app.database import engine, SessionLocal
 from app import models
 from app.routers import auth, prayers, announcements, sermons, donations, bible, emotions, discipleship, sedes, members
+
+def _birthday_5am_background_worker():
+    """Hilo en segundo plano que verifica cada minuto si son las 5:00 AM (Hora Venezuela) para despachar las felicitaciones del día."""
+    while True:
+        try:
+            db = SessionLocal()
+            try:
+                members.dispatch_daily_5am_birthday_greetings(db)
+            finally:
+                db.close()
+        except Exception:
+            pass
+        time.sleep(60)
 
 # Asegurar que todas las tablas y nuevas columnas existan en PostgreSQL / SQLite al iniciar
 try:
     models.Base.metadata.create_all(bind=engine)
     with engine.begin() as conn:
         conn.execute(text("ALTER TABLE members ADD COLUMN IF NOT EXISTS allowed_modules TEXT;"))
+        conn.execute(text("ALTER TABLE members ADD COLUMN IF NOT EXISTS birth_date VARCHAR(20);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date VARCHAR(20);"))
+        conn.execute(text("ALTER TABLE members ALTER COLUMN phone TYPE VARCHAR(255);"))
+        conn.execute(text("ALTER TABLE users ALTER COLUMN phone TYPE VARCHAR(255);"))
+    threading.Thread(target=_birthday_5am_background_worker, daemon=True).start()
 except Exception as e:
     print(f"Aviso inicializando tablas de base de datos: {e}")
 

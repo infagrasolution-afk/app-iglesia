@@ -730,11 +730,24 @@ export default function Members() {
               <CakeIcon />
             </Avatar>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 800, color: '#78350F', lineHeight: 1.2 }}>
-                🎂 Cumpleaños del Mes de {MONTH_NAMES[Number(selectedBirthdayMonth) - 1]} ({monthlyBirthdays.length})
-              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                <Typography variant="h6" sx={{ fontWeight: 800, color: '#78350F', lineHeight: 1.2 }}>
+                  🎂 Cumpleaños del Mes de {MONTH_NAMES[Number(selectedBirthdayMonth) - 1]} ({monthlyBirthdays.length})
+                </Typography>
+                <Chip
+                  label="⏰ Envío automático en la App: 5:00 AM"
+                  size="small"
+                  sx={{
+                    height: 21,
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    backgroundColor: '#78350F',
+                    color: '#FEF3C7'
+                  }}
+                />
+              </Stack>
               <Typography variant="caption" sx={{ color: '#92400E', fontWeight: 600 }}>
-                El sistema busca a los cumpleañeros del mes y prepara su felicitación oficial de parte de la Iglesia Restauración.
+                El cumpleañero del día recibe automáticamente su mensaje de felicitación a las 5:00 AM con notificación, sonido y vibración.
               </Typography>
             </Box>
           </Stack>

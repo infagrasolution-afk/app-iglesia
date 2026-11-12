@@ -18,15 +18,8 @@
     <title>Iglesia Restauración - Portal</title>
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (var r of registrations) {
-            r.unregister().then(function(unregistered) {
-              if (unregistered) {
-                console.log('Stale Service Worker unregistered successfully.');
-                window.location.reload();
-              }
-            });
-          }
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').catch(function() {});
         });
         if ('caches' in window) {
           caches.keys().then(function(names) {

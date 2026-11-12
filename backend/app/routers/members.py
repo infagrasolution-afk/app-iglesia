@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, Depends, status
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import json
@@ -109,6 +109,62 @@ def build_birthday_greeting(full_name: str, sede_name: str = "Iglesia Restauraci
         f"Iglesia Restauración"
     )
 
+def dispatch_daily_5am_birthday_greetings(db: Session):
+    """
+    Revisa automáticamente si ya son las 5:00 AM (Hora Venezuela UTC-4) o más,
+    y para cada cumpleañero del día publica y envía automáticamente su mensaje
+    de felicitación de parte de la Iglesia Restauración.
+    """
+    try:
+        ve_now = datetime.utcnow() - timedelta(hours=4)
+        if ve_now.hour < 5:
+            return []
+        today_month = ve_now.month
+        today_day = ve_now.day
+        today_date_str = ve_now.strftime("%Y-%m-%d")
+
+        members_with_bday = db.query(models.Member).filter(models.Member.birth_date.isnot(None)).all()
+        dispatched = []
+        for m in members_with_bday:
+            bdate_str = (m.birth_date or "").strip()
+            if not bdate_str:
+                continue
+            try:
+                parts = bdate_str.split("-")
+                if len(parts) != 3:
+                    continue
+                b_month = int(parts[1])
+                b_day = int(parts[2])
+            except Exception:
+                continue
+
+            if b_month == today_month and b_day == today_day:
+                auto_category = f"Cumpleaños {today_date_str} (5:00 AM)"
+                expected_title = f"🎂 ¡Feliz Cumpleaños, {m.full_name}! 🎉"
+                existing_ann = db.query(models.Announcement).filter(
+                    models.Announcement.title == expected_title,
+                    models.Announcement.category == auto_category
+                ).first()
+                if not existing_ann:
+                    greeting_text = build_birthday_greeting(m.full_name, m.sede_name or m.sede_id)
+                    new_ann = models.Announcement(
+                        title=expected_title,
+                        content=greeting_text,
+                        category=auto_category,
+                        is_important=True,
+                        sede_id=m.sede_id or "TODAS",
+                        sede_name=m.sede_name or "Todas las Sedes (Nacional)",
+                        created_by="Iglesia Restauración (Envío Automático 5:00 AM)"
+                    )
+                    db.add(new_ann)
+                    dispatched.append(m.full_name)
+        if dispatched:
+            db.commit()
+        return dispatched
+    except Exception:
+        db.rollback()
+        return []
+
 def _parse_modules(raw_val: Optional[str], fallback_list: Optional[List[str]] = None) -> List[str]:
     if raw_val:
         try:
@@ -173,10 +229,11 @@ def get_monthly_birthdays(
     de parte de la Iglesia Restauración.
     """
     _ensure_allowed_modules_column(db)
-    now = datetime.utcnow()
-    target_month = month if (month and 1 <= month <= 12) else now.month
-    today_month = now.month
-    today_day = now.day
+    dispatch_daily_5am_birthday_greetings(db)
+    ve_now = datetime.utcnow() - timedelta(hours=4)
+    target_month = month if (month and 1 <= month <= 12) else ve_now.month
+    today_month = ve_now.month
+    today_day = ve_now.day
 
     eff_role = (current_user.get("role") if current_user else viewer_role) or "MIEMBRO"
     eff_sede = (current_user.get("sede") if current_user else viewer_sede) or ""
@@ -225,13 +282,16 @@ def get_monthly_birthdays(
             "phone": decrypted_phone if allowed_phone else "🔒 Encriptado (Privado)",
             "phone_visible": allowed_phone,
             "greeting_message": greeting_msg,
-            "whatsapp_url": wa_url
+            "whatsapp_url": wa_url,
+            "scheduled_time": "05:00 AM",
+            "auto_dispatched_5am": (b_month == today_month and b_day == today_day and ve_now.hour >= 5)
         })
 
     birthdays.sort(key=lambda x: x["birth_day"])
     return {
         "month": target_month,
         "count": len(birthdays),
+        "scheduled_dispatch_time": "05:00 AM",
         "birthdays": birthdays
     }
 
