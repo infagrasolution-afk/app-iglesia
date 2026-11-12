@@ -57,6 +57,7 @@ import {
   LockReset as LockResetIcon,
   Key as KeyIcon,
   CheckCircle as CheckCircleIcon,
+  Cake as CakeIcon,
   Visibility,
   VisibilityOff
 } from '@mui/icons-material';
@@ -117,6 +118,61 @@ export default function AppLayout({ children }) {
   const [resetRequests, setResetRequests] = useState([]);
   const [loadingResets, setLoadingResets] = useState(false);
   const [resolvingId, setResolvingId] = useState(null);
+
+  // Birthday Celebration Popup for the Logged-in Birthday Member
+  const [birthdayPopup, setBirthdayPopup] = useState(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+    const userKey = (user.username || user.full_name || 'user').toLowerCase().trim();
+    const dismissedKey = `restauracion_bday_seen_${userKey}_${todayKey}`;
+    if (sessionStorage.getItem(dismissedKey)) return;
+
+    // 1. Verificar si hoy es el cumpleaños según user.birth_date (YYYY-MM-DD)
+    let isUserBirthdayToday = false;
+    if (user.birth_date && typeof user.birth_date === 'string') {
+      const parts = user.birth_date.trim().split('T')[0].split('-');
+      if (parts.length === 3) {
+        const bMonth = parseInt(parts[1], 10);
+        const bDay = parseInt(parts[2], 10);
+        if (bMonth === (now.getMonth() + 1) && bDay === now.getDate()) {
+          isUserBirthdayToday = true;
+        }
+      }
+    }
+
+    // 2. O si la iglesia le envió una felicitación directa
+    let customGreeting = null;
+    try {
+      const stored = JSON.parse(localStorage.getItem('restauracion_bday_greetings') || '{}');
+      if (stored[userKey]) {
+        customGreeting = stored[userKey];
+      }
+    } catch {}
+
+    if (isUserBirthdayToday || customGreeting) {
+      const displayName = user.full_name || user.name || user.username || 'Hermano(a)';
+      const sedeLabel = activeSedeDetails?.name || user.sede || 'Iglesia Restauración';
+      setBirthdayPopup({
+        full_name: displayName,
+        sede_name: sedeLabel,
+        dismissedKey,
+        userKey,
+        message:
+          customGreeting?.message ||
+          `🎂 ¡Feliz y bendecido cumpleaños, ${displayName}! 🎉🕊️\n\n` +
+            `En nombre de toda la familia pastoral y congregacional de la Iglesia Restauración (${sedeLabel}), ` +
+            `hoy celebramos tu vida y damos gracias a Dios por un nuevo año de propósito, salud y gracia sobre ti.\n\n` +
+            `📖 «Jehová te bendiga, y te guarde; Jehová haga resplandecer su rostro sobre ti, y tenga de ti misericordia; ` +
+            `Jehová alce sobre ti su rostro, y ponga en ti paz.» (Números 6:24-26)\n\n` +
+            `¡Que el Señor conceda las peticiones de tu corazón en este nuevo año de vida! 🙌✨\n` +
+            `Con amor en Cristo,\n` +
+            `Iglesia Restauración`
+      });
+    }
+  }, [user, activeSedeDetails]);
 
   const loadResetRequests = async () => {
     if (!canManageAllSedes) return;
@@ -836,6 +892,86 @@ export default function AppLayout({ children }) {
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setResetModalOpen(false)} variant="outlined" sx={{ borderRadius: '50px' }}>
             Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de Felicitación de Cumpleaños para el Cumpleañero de parte de Iglesia Restauración */}
+      <Dialog
+        open={Boolean(birthdayPopup)}
+        onClose={() => {
+          if (birthdayPopup?.dismissedKey) {
+            sessionStorage.setItem(birthdayPopup.dismissedKey, '1');
+          }
+          setBirthdayPopup(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '26px',
+            p: 1,
+            background: 'linear-gradient(135deg, #FFFBEB 0%, #FFFFFF 50%, #FEF3C7 100%)',
+            border: '2px solid #F59E0B',
+            boxShadow: '0 25px 60px rgba(217, 119, 6, 0.35)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ textAlign: 'center', pt: 3, pb: 1 }}>
+          <Box sx={{ fontSize: '3rem', lineHeight: 1, mb: 1 }}>🎂🎉🕊️</Box>
+          <Typography sx={{ fontWeight: 900, fontSize: '1.35rem', color: '#83050B' }}>
+            ¡Feliz Cumpleaños, {birthdayPopup?.full_name}!
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#B45309', fontWeight: 700, fontSize: '0.82rem' }}>
+            Un mensaje especial de parte de tu familia de la Iglesia Restauración
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ px: { xs: 2.5, sm: 3.5 }, py: 2 }}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2.5,
+              borderRadius: '18px',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #FCD34D',
+              whiteSpace: 'pre-wrap',
+              fontSize: '0.9rem',
+              lineHeight: 1.65,
+              color: '#1E293B',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.04)'
+            }}
+          >
+            {birthdayPopup?.message}
+          </Paper>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 3, pt: 1 }}>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (birthdayPopup?.dismissedKey) {
+                sessionStorage.setItem(birthdayPopup.dismissedKey, '1');
+              }
+              try {
+                const stored = JSON.parse(localStorage.getItem('restauracion_bday_greetings') || '{}');
+                if (birthdayPopup?.userKey && stored[birthdayPopup.userKey]) {
+                  delete stored[birthdayPopup.userKey];
+                  localStorage.setItem('restauracion_bday_greetings', JSON.stringify(stored));
+                }
+              } catch {}
+              setBirthdayPopup(null);
+            }}
+            sx={{
+              borderRadius: '50px',
+              px: 4,
+              py: 1.2,
+              fontWeight: 800,
+              textTransform: 'none',
+              background: 'linear-gradient(135deg, #83050B 0%, #D97706 100%)',
+              color: '#FFFFFF',
+              boxShadow: '0 8px 20px rgba(131, 5, 11, 0.3)'
+            }}
+          >
+            🙏 ¡Amén! Recibo esta bendición
           </Button>
         </DialogActions>
       </Dialog>

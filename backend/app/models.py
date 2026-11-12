@@ -18,7 +18,8 @@ class User(Base):
     sede = Column(String(100), default="TODAS", index=True)      # 'TODAS' para superadmins o id de sede
     is_owner = Column(Boolean, default=False)
     is_global_pastor = Column(Boolean, default=False)
-    phone = Column(String(50), nullable=True)
+    phone = Column(String(255), nullable=True)
+    birth_date = Column(String(20), nullable=True)               # Fecha de nacimiento YYYY-MM-DD
     permissions = Column(Text, nullable=True)                    # JSON string de permisos
     is_active = Column(Boolean, default=True)
     must_change_password = Column(Boolean, default=False)        # Obliga a cambiar clave en 1er login
@@ -87,7 +88,8 @@ class Member(Base):
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String(255), nullable=False)
     email = Column(String(255), nullable=True)
-    phone = Column(String(50), nullable=True)
+    phone = Column(String(255), nullable=True)                   # Encriptado en BD (ENC:v1:...)
+    birth_date = Column(String(20), nullable=True)               # Fecha de nacimiento YYYY-MM-DD
     sede_id = Column(String(50), index=True, nullable=False)     # Vinculación estricta a la sede
     sede_name = Column(String(255), nullable=True)
     role = Column(String(50), default="MIEMBRO")                 # MIEMBRO, SERVIDOR, LIDER

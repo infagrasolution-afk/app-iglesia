@@ -1,24 +1,48 @@
 import os
+import sys
 import psycopg2
 from dotenv import load_dotenv
+
+sys.path.insert(0, os.path.dirname(__file__))
+from app import security
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 url = os.getenv('DATABASE_URL')
 conn = psycopg2.connect(url)
 cur = conn.cursor()
 
-# Asegurar que la columna allowed_modules exista en members y eliminar restricciones que bloqueaban registros sin email o con sede='TODAS'
+# Asegurar que las columnas allowed_modules y birth_date existan y phone tenga longitud suficiente para encriptación
 try:
     cur.execute("ALTER TABLE members ADD COLUMN IF NOT EXISTS allowed_modules TEXT;")
+    cur.execute("ALTER TABLE members ADD COLUMN IF NOT EXISTS birth_date VARCHAR(20);")
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date VARCHAR(20);")
+    cur.execute("ALTER TABLE members ALTER COLUMN phone TYPE VARCHAR(255);")
+    cur.execute("ALTER TABLE users ALTER COLUMN phone TYPE VARCHAR(255);")
     cur.execute("ALTER TABLE users ALTER COLUMN email DROP NOT NULL;")
     cur.execute("ALTER TABLE members DROP CONSTRAINT IF EXISTS fk_members_sede;")
     conn.commit()
-    print("Esquema de 'members' y 'users' actualizado en Neon PostgreSQL (email opcional y soporte sede='TODAS').")
+    print("Esquema de 'members' y 'users' actualizado en Neon PostgreSQL (birth_date y phone encriptado).")
 except Exception as e:
     conn.rollback()
     print(f"Aviso actualizando esquema: {e}")
 
-cur.execute("SELECT id, full_name, email, sede_id, role FROM members ORDER BY id DESC;")
+# Encriptar números telefónicos en texto plano en members y users
+try:
+    cur.execute("SELECT id, phone FROM members WHERE phone IS NOT NULL AND phone != 'No registrado' AND phone NOT LIKE 'ENC:v1:%';")
+    for m_id, m_phone in cur.fetchall():
+        enc = security.encrypt_phone(m_phone)
+        cur.execute("UPDATE members SET phone = %s WHERE id = %s;", (enc, m_id))
+    cur.execute("SELECT id, phone FROM users WHERE phone IS NOT NULL AND phone != 'No registrado' AND phone NOT LIKE 'ENC:v1:%';")
+    for u_id, u_phone in cur.fetchall():
+        enc = security.encrypt_phone(u_phone)
+        cur.execute("UPDATE users SET phone = %s WHERE id = %s;", (enc, u_id))
+    conn.commit()
+    print("Teléfonos existentes encriptados exitosamente en Neon PostgreSQL.")
+except Exception as e:
+    conn.rollback()
+    print(f"Aviso encriptando teléfonos: {e}")
+
+cur.execute("SELECT id, full_name, email, phone, birth_date, sede_id, role FROM members ORDER BY id DESC;")
 rows = cur.fetchall()
 print(f"Miembros actuales en Neon PostgreSQL ({len(rows)}):", rows)
 

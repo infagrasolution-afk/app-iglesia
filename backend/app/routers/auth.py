@@ -87,6 +87,18 @@ def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
         if parsed_modules:
             allowed_modules = parsed_modules
 
+    # Resolver fecha de nacimiento del usuario (desde users o vinculada en members)
+    resolved_birth_date = getattr(user, "birth_date", None)
+    if not resolved_birth_date:
+        member_query = db.query(models.Member)
+        member_match = None
+        if user.email:
+            member_match = member_query.filter(models.Member.email.ilike(user.email)).first()
+        if not member_match and user.full_name:
+            member_match = member_query.filter(models.Member.full_name.ilike(user.full_name)).first()
+        if member_match and getattr(member_match, "birth_date", None):
+            resolved_birth_date = member_match.birth_date
+
     user_dict = {
         "id": user.id,
         "email": user.email,
@@ -97,7 +109,8 @@ def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
         "is_owner": user.is_owner,
         "is_global_pastor": user.is_global_pastor,
         "must_change_password": bool(user.must_change_password),
-        "phone": user.phone,
+        "phone": security.decrypt_phone(user.phone) if user.phone else None,
+        "birth_date": resolved_birth_date,
         "allowed_modules": allowed_modules
     }
 

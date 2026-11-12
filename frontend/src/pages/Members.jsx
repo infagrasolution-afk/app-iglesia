@@ -49,11 +49,54 @@ import {
   ContentCopy as CopyIcon,
   Key as KeyIcon,
   DeleteOutline as DeleteIcon,
-  Tune as TuneIcon
+  Tune as TuneIcon,
+  Cake as CakeIcon,
+  Celebration as CelebrationIcon
 } from '@mui/icons-material';
 import { useAuth, APP_MODULES_CATALOG, DEFAULT_MEMBER_MODULES, ALL_MODULE_KEYS } from '../context/AuthContext';
 import { SEDES_LIST } from '../data/sedesData';
-import { membersAPI } from '../services/api';
+import { membersAPI, announcementAPI } from '../services/api';
+
+const MONTH_NAMES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
+function parseBirthDateInfo(birthDateStr) {
+  if (!birthDateStr || typeof birthDateStr !== 'string') return null;
+  const clean = birthDateStr.trim().split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length !== 3) return null;
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  if (!month || !day || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const now = new Date();
+  const isToday = (now.getMonth() + 1) === month && now.getDate() === day;
+  return {
+    raw: clean,
+    year,
+    month,
+    day,
+    monthName: MONTH_NAMES[month - 1],
+    formatted: `${day} de ${MONTH_NAMES[month - 1]}`,
+    isToday
+  };
+}
+
+function buildBirthdayMessage(member) {
+  const sedeLabel = member?.sede_name || member?.sede_id || 'Iglesia Restauración';
+  return (
+    `🎂 ¡Feliz y bendecido cumpleaños, ${member?.full_name || 'Hermano(a)'}! 🎉🕊️\n\n` +
+    `En nombre de toda la familia pastoral y congregacional de la Iglesia Restauración (${sedeLabel}), ` +
+    `hoy celebramos tu vida y damos gracias a Dios por un nuevo año de propósito, salud y gracia sobre ti.\n\n` +
+    `📖 «Jehová te bendiga, y te guarde; Jehová haga resplandecer su rostro sobre ti, y tenga de ti misericordia; ` +
+    `Jehová alce sobre ti su rostro, y ponga en ti paz.» (Números 6:24-26)\n\n` +
+    `¡Que el Señor conceda las peticiones de tu corazón en este nuevo año de vida! 🙌✨\n` +
+    `Con amor en Cristo,\n` +
+    `Iglesia Restauración`
+  );
+}
 
 function generateUsernameFromName(fullName) {
   if (!fullName) return '';
@@ -88,6 +131,7 @@ export default function Members() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [ministryFilter, setMinistryFilter] = useState('ALL');
+  const [selectedBirthdayMonth, setSelectedBirthdayMonth] = useState(() => new Date().getMonth() + 1);
 
   // Modal State for New Member
   const [openModal, setOpenModal] = useState(false);
@@ -98,9 +142,16 @@ export default function Members() {
   const [welcomeModalData, setWelcomeModalData] = useState(null);
   const [copiedMessage, setCopiedMessage] = useState(false);
 
-  // Modal State for Editing Allowed Modules of an existing member
+  // Modal State for Birthday Greeting from Iglesia Restauración
+  const [birthdayModalData, setBirthdayModalData] = useState(null);
+  const [copiedBdayMessage, setCopiedBdayMessage] = useState(false);
+  const [sendingInAppGreeting, setSendingInAppGreeting] = useState(false);
+
+  // Modal State for Editing Allowed Modules & Birth Date of an existing member
   const [modulesEditMember, setModulesEditMember] = useState(null);
   const [modulesEditList, setModulesEditList] = useState(DEFAULT_MEMBER_MODULES);
+  const [editBirthDate, setEditBirthDate] = useState('');
+  const [editPhone, setEditPhone] = useState('');
   const [savingModules, setSavingModules] = useState(false);
 
   // Form State
@@ -112,6 +163,7 @@ export default function Members() {
     full_name: '',
     email: '',
     phone: '',
+    birth_date: '',
     sede_id: defaultFormSede,
     role: 'MIEMBRO',
     ministry: 'Grupo de Conexión',
@@ -125,13 +177,17 @@ export default function Members() {
   // Load members on mount and filter change
   useEffect(() => {
     loadMembersData();
-  }, [selectedSedeFilter]);
+  }, [selectedSedeFilter, currentRole, user?.sede]);
 
   const loadMembersData = async () => {
     setLoading(true);
     try {
-      const data = await membersAPI.getAll(selectedSedeFilter);
-      setMembers(data);
+      const data = await membersAPI.getAll(selectedSedeFilter, {
+        role: currentRole,
+        sede: user?.sede,
+        username: user?.username
+      });
+      setMembers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching members:', err);
     } finally {
@@ -157,6 +213,7 @@ export default function Members() {
       full_name: '',
       email: '',
       phone: '',
+      birth_date: '',
       sede_id: targetSede,
       role: presetRole,
       ministry: isSuperRole ? 'Dirección General / Superadmin' : 'Grupo de Conexión',
@@ -183,6 +240,8 @@ export default function Members() {
   const handleOpenEditModules = (member) => {
     if (!canCreateMembers) return;
     setModulesEditMember(member);
+    setEditBirthDate(member.birth_date || '');
+    setEditPhone(member.phone && !String(member.phone).startsWith('🔒') && member.phone !== 'No registrado' ? member.phone : '');
     setModulesEditList(
       Array.isArray(member.allowed_modules) && member.allowed_modules.length > 0
         ? member.allowed_modules
@@ -194,24 +253,100 @@ export default function Members() {
     if (!modulesEditMember) return;
     setSavingModules(true);
     try {
-      await membersAPI.update(modulesEditMember.id, { allowed_modules: modulesEditList });
+      const updatePayload = {
+        allowed_modules: modulesEditList,
+        birth_date: editBirthDate || null
+      };
+      if (editPhone.trim()) {
+        updatePayload.phone = editPhone.trim();
+      }
+      const res = await membersAPI.update(modulesEditMember.id, updatePayload);
+      const updatedMemberObj = res?.member || {
+        ...modulesEditMember,
+        allowed_modules: modulesEditList,
+        birth_date: editBirthDate || null,
+        phone: editPhone.trim() || modulesEditMember.phone
+      };
       setMembers((prev) =>
-        prev.map((m) => (m.id === modulesEditMember.id ? { ...m, allowed_modules: modulesEditList } : m))
+        prev.map((m) => (m.id === modulesEditMember.id ? { ...m, ...updatedMemberObj } : m))
       );
       setSnackbar({
         open: true,
-        message: `¡Módulos visibles actualizados para ${modulesEditMember.full_name} en Neon PostgreSQL!`,
+        message: `¡Datos, fecha de nacimiento y módulos actualizados para ${modulesEditMember.full_name}!`,
         severity: 'success'
       });
       setModulesEditMember(null);
     } catch (err) {
       setSnackbar({
         open: true,
-        message: err.message || 'Error al actualizar módulos permitidos',
+        message: err.message || 'Error al actualizar datos del miembro',
         severity: 'error'
       });
     } finally {
       setSavingModules(false);
+    }
+  };
+
+  const handleOpenBirthdayModal = (member) => {
+    const canSeePhone = canManageAllSedes || (isSedeAdmin && (member.sede_id === user?.sede || user?.sede === 'TODAS'));
+    const rawPhone = canSeePhone && member.phone && !String(member.phone).startsWith('🔒') && member.phone !== 'No registrado'
+      ? member.phone
+      : '';
+    const digits = rawPhone.replace(/\D/g, '');
+    const formattedPhone = digits.startsWith('0') && digits.length === 11
+      ? '58' + digits.slice(1)
+      : (digits.length === 10 && digits.startsWith('4') ? '58' + digits : digits);
+    const msg = buildBirthdayMessage(member);
+    setBirthdayModalData({
+      member,
+      bdayInfo: parseBirthDateInfo(member.birth_date),
+      message: msg,
+      phone: formattedPhone,
+      whatsappUrl: formattedPhone ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}` : ''
+    });
+  };
+
+  const handleSendInAppBirthdayGreeting = async () => {
+    if (!birthdayModalData?.member) return;
+    setSendingInAppGreeting(true);
+    try {
+      const m = birthdayModalData.member;
+      await announcementAPI.create({
+        title: `🎂 ¡Feliz Cumpleaños, ${m.full_name}! 🎉`,
+        content: birthdayModalData.message,
+        category: 'Cumpleaños y Celebraciones',
+        is_important: true,
+        sede_id: m.sede_id || 'TODAS',
+        sede_name: m.sede_name || 'Iglesia Restauración',
+        created_by: 'Iglesia Restauración — Pastoral y Congregación'
+      });
+      // Guardar también notificación directa para cuando el cumpleañero inicie sesión
+      try {
+        const storedGreetings = JSON.parse(localStorage.getItem('restauracion_bday_greetings') || '{}');
+        const key = (m.username || m.full_name || '').toLowerCase().trim();
+        if (key) {
+          storedGreetings[key] = {
+            full_name: m.full_name,
+            sede_name: m.sede_name || m.sede_id,
+            message: birthdayModalData.message,
+            sent_at: new Date().toISOString()
+          };
+          localStorage.setItem('restauracion_bday_greetings', JSON.stringify(storedGreetings));
+        }
+      } catch {}
+      setSnackbar({
+        open: true,
+        message: `🎉 ¡Felicitación de la Iglesia Restauración enviada a ${m.full_name} en la plataforma y boletín!`,
+        severity: 'success'
+      });
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: 'Error al enviar felicitación en la app',
+        severity: 'error'
+      });
+    } finally {
+      setSendingInAppGreeting(false);
     }
   };
 
@@ -252,6 +387,7 @@ export default function Members() {
         full_name: formData.full_name.trim(),
         email: cleanEmail,
         phone: formData.phone.trim() || 'No registrado',
+        birth_date: formData.birth_date || null,
         sede_id: formData.role === 'SUPER_ADMIN' ? 'TODAS' : formData.sede_id,
         sede_name: formData.role === 'SUPER_ADMIN' ? 'Todas las Sedes (Nacional)' : resolvedSedeName,
         role: formData.role,
@@ -371,6 +507,26 @@ export default function Members() {
     const servidores = filteredMembers.filter((m) => m.role === 'SERVIDOR' || m.role === 'LIDER').length;
     return { total, bautizados, porBautizar, servidores };
   }, [filteredMembers]);
+
+  // Cumpleaños del mes seleccionado
+  const monthlyBirthdays = useMemo(() => {
+    return members
+      .filter((m) => {
+        if (!canManageAllSedes && user?.sede && m.sede_id !== user.sede && m.sede_id !== 'TODAS') {
+          return false;
+        }
+        if (canManageAllSedes && selectedSedeFilter !== 'TODAS' && m.sede_id !== selectedSedeFilter && m.sede_id !== 'TODAS') {
+          return false;
+        }
+        const bInfo = parseBirthDateInfo(m.birth_date);
+        return bInfo && bInfo.month === Number(selectedBirthdayMonth);
+      })
+      .map((m) => ({
+        ...m,
+        bdayInfo: parseBirthDateInfo(m.birth_date)
+      }))
+      .sort((a, b) => (a.bdayInfo?.day || 0) - (b.bdayInfo?.day || 0));
+  }, [members, canManageAllSedes, selectedSedeFilter, user, selectedBirthdayMonth]);
 
   // Helper colors for sedes
   const getSedeColor = (sedeId) => {
@@ -549,6 +705,147 @@ export default function Members() {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Cumpleaños del Mes — Iglesia Restauración */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2, sm: 2.5 },
+          mb: 3,
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 50%, #FDE68A 100%)',
+          border: '1.5px solid #F59E0B',
+          boxShadow: '0 6px 20px rgba(245, 158, 11, 0.14)'
+        }}
+      >
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          spacing={1.5}
+          sx={{ mb: 2 }}
+        >
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Avatar sx={{ bgcolor: '#D97706', color: '#FFFFFF', width: 42, height: 42 }}>
+              <CakeIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#78350F', lineHeight: 1.2 }}>
+                🎂 Cumpleaños del Mes de {MONTH_NAMES[Number(selectedBirthdayMonth) - 1]} ({monthlyBirthdays.length})
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#92400E', fontWeight: 600 }}>
+                El sistema busca a los cumpleañeros del mes y prepara su felicitación oficial de parte de la Iglesia Restauración.
+              </Typography>
+            </Box>
+          </Stack>
+
+          <FormControl size="small" sx={{ minWidth: 180, backgroundColor: '#FFFFFF', borderRadius: 2 }}>
+            <InputLabel id="bday-month-label">Mes de Cumpleaños</InputLabel>
+            <Select
+              labelId="bday-month-label"
+              value={selectedBirthdayMonth}
+              label="Mes de Cumpleaños"
+              onChange={(e) => setSelectedBirthdayMonth(Number(e.target.value))}
+            >
+              {MONTH_NAMES.map((mName, idx) => (
+                <MenuItem key={mName} value={idx + 1}>
+                  🎂 {mName} {idx + 1 === (new Date().getMonth() + 1) ? '(Mes actual)' : ''}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Stack>
+
+        {monthlyBirthdays.length === 0 ? (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              borderRadius: 2,
+              backgroundColor: 'rgba(255, 255, 255, 0.78)',
+              border: '1px dashed #F59E0B',
+              textAlign: 'center'
+            }}
+          >
+            <Typography variant="body2" sx={{ color: '#92400E', fontWeight: 600 }}>
+              No hay miembros registrados con cumpleaños en {MONTH_NAMES[Number(selectedBirthdayMonth) - 1]}. Al registrar o editar un miembro con su Fecha de Nacimiento, aparecerá aquí automáticamente.
+            </Typography>
+          </Paper>
+        ) : (
+          <Grid container spacing={1.8}>
+            {monthlyBirthdays.map((bMember) => (
+              <Grid item xs={12} sm={6} md={4} key={`bday-${bMember.id}`}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2.5,
+                    backgroundColor: '#FFFFFF',
+                    border: bMember.bdayInfo?.isToday ? '2px solid #DC2626' : '1px solid #FCD34D',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: 1.2,
+                    height: '100%',
+                    boxShadow: bMember.bdayInfo?.isToday ? '0 6px 18px rgba(220, 38, 38, 0.18)' : 'none'
+                  }}
+                >
+                  <Stack direction="row" spacing={1.2} alignItems="center">
+                    <Avatar sx={{ bgcolor: bMember.bdayInfo?.isToday ? '#DC2626' : '#D97706', fontWeight: 800 }}>
+                      🎂
+                    </Avatar>
+                    <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                      <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap">
+                        <Typography sx={{ fontWeight: 800, color: '#0F172A', fontSize: '0.95rem' }}>
+                          {bMember.full_name}
+                        </Typography>
+                        {bMember.bdayInfo?.isToday && (
+                          <Chip
+                            label="🎉 ¡HOY ES SU CUMPLEAÑOS!"
+                            size="small"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.65rem',
+                              fontWeight: 800,
+                              backgroundColor: '#FEE2E2',
+                              color: '#DC2626',
+                              border: '1px solid #FCA5A5'
+                            }}
+                          />
+                        )}
+                      </Stack>
+                      <Typography variant="caption" sx={{ color: '#B45309', fontWeight: 700, display: 'block' }}>
+                        📅 {bMember.bdayInfo?.formatted} • {bMember.sede_name || bMember.sede_id}
+                      </Typography>
+                    </Box>
+                  </Stack>
+
+                  <Button
+                    variant="contained"
+                    size="small"
+                    fullWidth
+                    startIcon={<CelebrationIcon />}
+                    onClick={() => handleOpenBirthdayModal(bMember)}
+                    sx={{
+                      mt: 0.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 800,
+                      background: 'linear-gradient(135deg, #83050B 0%, #D97706 100%)',
+                      color: '#FFFFFF',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #5B0307 0%, #B45309 100%)'
+                      }
+                    }}
+                  >
+                    🎁 Enviar Felicitación de Restauración
+                  </Button>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </Paper>
 
       {/* Filter and Search Bar */}
       <Paper sx={{ p: 2, mb: 3, borderRadius: 2.5, border: '1px solid #E2E8F0' }}>
@@ -819,23 +1116,95 @@ export default function Members() {
 
                     {/* Contact & Ministry Info */}
                     <Stack spacing={0.8} sx={{ my: 1, flexGrow: 1 }}>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <PhoneIcon sx={{ fontSize: 16, color: '#64748B' }} />
-                        <Typography variant="body2" sx={{ color: '#334155', fontWeight: 500 }}>
-                          {member.phone}
-                        </Typography>
-                        {member.phone && member.phone !== 'No registrado' && (
-                          <IconButton
+                      {(() => {
+                        const canSeeMemberPhone =
+                          canManageAllSedes ||
+                          (isSedeAdmin && (member.sede_id === user?.sede || user?.sede === 'TODAS'));
+                        const rawPhone = String(member.phone || '');
+                        const isMaskedOrEmpty =
+                          !rawPhone || rawPhone === 'No registrado' || rawPhone.startsWith('🔒');
+
+                        if (canSeeMemberPhone && !isMaskedOrEmpty) {
+                          return (
+                            <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap">
+                              <PhoneIcon sx={{ fontSize: 16, color: '#059669' }} />
+                              <Typography variant="body2" sx={{ color: '#0F172A', fontWeight: 700 }}>
+                                {rawPhone}
+                              </Typography>
+                              <Chip
+                                icon={<LockIcon sx={{ fontSize: '12px !important', color: '#047857 !important' }} />}
+                                label="Encriptado • Visible Admin"
+                                size="small"
+                                sx={{
+                                  height: 19,
+                                  fontSize: '0.62rem',
+                                  fontWeight: 700,
+                                  backgroundColor: '#ECFDF5',
+                                  color: '#047857',
+                                  border: '1px solid #A7F3D0'
+                                }}
+                              />
+                              <IconButton
+                                size="small"
+                                component="a"
+                                href={`https://wa.me/${rawPhone.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                sx={{ p: 0.2, color: '#25D366' }}
+                              >
+                                <WhatsAppIcon sx={{ fontSize: 15 }} />
+                              </IconButton>
+                            </Stack>
+                          );
+                        }
+
+                        if (!canSeeMemberPhone) {
+                          return (
+                            <Stack direction="row" spacing={0.8} alignItems="center">
+                              <LockIcon sx={{ fontSize: 16, color: '#B45309' }} />
+                              <Typography variant="caption" sx={{ color: '#92400E', fontWeight: 700 }}>
+                                🔒 Teléfono Encriptado (Solo Encargado de Sede y Superadmin)
+                              </Typography>
+                            </Stack>
+                          );
+                        }
+
+                        return (
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <PhoneIcon sx={{ fontSize: 16, color: '#94A3B8' }} />
+                            <Typography variant="body2" sx={{ color: '#94A3B8', fontWeight: 500 }}>
+                              No registrado
+                            </Typography>
+                          </Stack>
+                        );
+                      })()}
+
+                      {member.birth_date && parseBirthDateInfo(member.birth_date) && (
+                        <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <CakeIcon sx={{ fontSize: 16, color: '#D97706' }} />
+                            <Typography variant="body2" sx={{ color: '#B45309', fontWeight: 700, fontSize: '0.82rem' }}>
+                              Cumpleaños: {parseBirthDateInfo(member.birth_date)?.formatted}
+                            </Typography>
+                          </Stack>
+                          <Button
                             size="small"
-                            component="a"
-                            href={`https://wa.me/${member.phone.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            sx={{ p: 0.2, color: '#25D366' }}
+                            onClick={() => handleOpenBirthdayModal(member)}
+                            sx={{
+                              py: 0.1,
+                              px: 1,
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              textTransform: 'none',
+                              borderRadius: 1.5,
+                              backgroundColor: '#FEF3C7',
+                              color: '#B45309',
+                              '&:hover': { backgroundColor: '#FDE68A' }
+                            }}
                           >
-                            <WhatsAppIcon sx={{ fontSize: 15 }} />
-                          </IconButton>
-                        )}
-                      </Stack>
+                            🎂 Felicitar
+                          </Button>
+                        </Stack>
+                      )}
 
                       {member.email && member.email !== 'No registrado' && (
                         <Stack direction="row" spacing={1} alignItems="center">
@@ -1055,7 +1424,7 @@ export default function Members() {
               </Grid>
 
               {/* Phone */}
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
                   size="small"
@@ -1063,16 +1432,31 @@ export default function Members() {
                   placeholder="0412-1234567"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  helperText="🔒 Se encripta en BD (solo Admin Sede y Superadmin)"
+                />
+              </Grid>
+
+              {/* Birth Date */}
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  label="Fecha de Nacimiento"
+                  InputLabelProps={{ shrink: true }}
+                  value={formData.birth_date}
+                  onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                  helperText="🎂 Para cumpleaños del mes y felicitaciones"
                 />
               </Grid>
 
               {/* Email */}
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
                   size="small"
                   type="email"
-                  label="Correo Electrónico"
+                  label="Correo Electrónico (Opcional)"
                   placeholder="correo@ejemplo.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -1523,8 +1907,34 @@ export default function Members() {
         </DialogTitle>
         <DialogContent dividers>
           <Alert severity="info" sx={{ mb: 2, borderRadius: '12px', fontSize: '0.8rem' }}>
-            Selecciona qué módulos de la plataforma podrá ver <strong>{modulesEditMember?.full_name}</strong> al iniciar sesión y desmarca los que deseas ocultarle.
+            Actualiza la fecha de nacimiento, teléfono encriptado y los módulos de la plataforma que podrá ver <strong>{modulesEditMember?.full_name}</strong>.
           </Alert>
+
+          <Grid container spacing={1.5} sx={{ mb: 2 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="🎂 Fecha de Nacimiento"
+                InputLabelProps={{ shrink: true }}
+                value={editBirthDate}
+                onChange={(e) => setEditBirthDate(e.target.value)}
+                helperText="Para aparecer en Cumpleaños del Mes"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                label="🔒 Teléfono (Se guarda encriptado)"
+                placeholder="0412-1234567"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                helperText="Visible solo para Encargado de Sede y Superadmin"
+              />
+            </Grid>
+          </Grid>
 
           <Stack direction="row" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
             <Chip
@@ -1619,8 +2029,129 @@ export default function Members() {
               '&:hover': { backgroundColor: '#1D4ED8' }
             }}
           >
-            {savingModules ? 'Guardando en Neon...' : 'Guardar Módulos Permitidos'}
+            {savingModules ? 'Guardando en Neon...' : 'Guardar Cambios'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* MODAL DE FELICITACIÓN DE CUMPLEAÑOS — IGLESIA RESTAURACIÓN */}
+      <Dialog
+        open={Boolean(birthdayModalData)}
+        onClose={() => setBirthdayModalData(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '24px',
+            p: 1,
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.45)',
+            border: '2px solid #F59E0B'
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <CakeIcon sx={{ color: '#D97706', fontSize: 32 }} />
+            <Box>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: '#0F172A' }}>
+                🎂 Felicitación de Cumpleaños — Iglesia Restauración
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#B45309', fontWeight: 700 }}>
+                Cumpleañero(a): {birthdayModalData?.member?.full_name} ({birthdayModalData?.bdayInfo?.formatted || ''})
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton size="small" onClick={() => setBirthdayModalData(null)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ p: 2, borderRadius: '16px', background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', border: '1px solid #FCD34D' }}>
+            <Typography sx={{ color: '#92400E', fontWeight: 800, fontSize: '0.95rem' }}>
+              🎉 Mensaje oficial de parte de la Iglesia Restauración
+            </Typography>
+            <Typography sx={{ color: '#B45309', fontSize: '0.82rem', mt: 0.4 }}>
+              Además de recibir una tarjeta automática al iniciar sesión en la app en su día de cumpleaños, puedes enviarle esta bendición directamente a su WhatsApp o publicarla en la app.
+            </Typography>
+          </Box>
+
+          <Box>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', mb: 0.8 }}>
+              Vista previa de la felicitación pastoral:
+            </Typography>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                borderRadius: '14px',
+                backgroundColor: '#FFFFFF',
+                fontSize: '0.84rem',
+                whiteSpace: 'pre-wrap',
+                lineHeight: 1.6,
+                color: '#1E293B',
+                border: '1px solid #E2E8F0'
+              }}
+            >
+              {birthdayModalData?.message}
+            </Paper>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<CopyIcon />}
+            onClick={() => {
+              navigator.clipboard.writeText(birthdayModalData?.message || '');
+              setCopiedBdayMessage(true);
+              setTimeout(() => setCopiedBdayMessage(false), 2500);
+            }}
+            sx={{ borderRadius: '50px', textTransform: 'none', fontWeight: 700 }}
+          >
+            {copiedBdayMessage ? '✓ Mensaje copiado' : 'Copiar Felicitación'}
+          </Button>
+
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {canCreateMembers && (
+              <Button
+                variant="contained"
+                startIcon={<CelebrationIcon />}
+                disabled={sendingInAppGreeting}
+                onClick={handleSendInAppBirthdayGreeting}
+                sx={{
+                  borderRadius: '50px',
+                  backgroundColor: '#83050B',
+                  color: '#FFFFFF',
+                  fontWeight: 800,
+                  textTransform: 'none',
+                  px: 2.2,
+                  '&:hover': { backgroundColor: '#5B0307' }
+                }}
+              >
+                {sendingInAppGreeting ? 'Enviando...' : 'Publicar Felicitación en la App'}
+              </Button>
+            )}
+            {birthdayModalData?.whatsappUrl && (
+              <Button
+                variant="contained"
+                startIcon={<WhatsAppIcon />}
+                onClick={() => {
+                  window.open(birthdayModalData.whatsappUrl, '_blank', 'noopener,noreferrer');
+                }}
+                sx={{
+                  borderRadius: '50px',
+                  backgroundColor: '#25D366',
+                  color: '#FFFFFF',
+                  fontWeight: 800,
+                  textTransform: 'none',
+                  px: 2.5,
+                  boxShadow: '0 4px 15px rgba(37, 211, 102, 0.4)',
+                  '&:hover': { backgroundColor: '#1EBE5D' }
+                }}
+              >
+                Enviar por WhatsApp
+              </Button>
+            )}
+          </Stack>
         </DialogActions>
       </Dialog>
 

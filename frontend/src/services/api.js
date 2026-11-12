@@ -596,14 +596,32 @@ export const discipleshipAPI = {
 
 // Members API Endpoints
 export const membersAPI = {
-  getAll: async (sedeId = null) => {
+  getAll: async (sedeId = null, viewer = null) => {
     try {
-      const query = sedeId && sedeId !== 'TODAS' ? `?sede_id=${sedeId}` : '';
+      let currentUser = viewer;
+      if (!currentUser && typeof window !== 'undefined') {
+        try {
+          const savedUser = localStorage.getItem('user') || localStorage.getItem('iglesia_auth_user');
+          if (savedUser) currentUser = JSON.parse(savedUser);
+        } catch {}
+      }
+      const params = new URLSearchParams();
+      if (sedeId && sedeId !== 'TODAS') params.set('sede_id', sedeId);
+      if (currentUser?.role) params.set('viewer_role', currentUser.role);
+      if (currentUser?.sede) params.set('viewer_sede', currentUser.sede);
+      if (currentUser?.username) params.set('viewer_username', currentUser.username);
+      const query = params.toString() ? `?${params.toString()}` : '';
       const data = await fetchAPI(`/members${query}`);
-      // Sincronizar caché local con la base de datos de Neon para que nunca queden miembros fantasmas en memoria
+      // Sincronizar caché local (con teléfonos protegidos en localStorage para evitar filtraciones)
       if (!sedeId || sedeId === 'TODAS') {
         const { saveStoredMembers } = await import('../data/membersData');
-        saveStoredMembers(Array.isArray(data) ? data : []);
+        const safeCache = Array.isArray(data)
+          ? data.map((m) => ({
+              ...m,
+              phone: m.phone && m.phone !== 'No registrado' ? '🔒 Encriptado (Privado)' : 'No registrado'
+            }))
+          : [];
+        saveStoredMembers(safeCache);
       }
       return data;
     } catch {
@@ -613,6 +631,28 @@ export const membersAPI = {
         return all.filter(m => m.sede_id === sedeId || m.sede_id === 'TODAS');
       }
       return all;
+    }
+  },
+
+  getBirthdays: async (month = null, sedeId = null) => {
+    try {
+      let currentUser = null;
+      if (typeof window !== 'undefined') {
+        try {
+          const savedUser = localStorage.getItem('user') || localStorage.getItem('iglesia_auth_user');
+          if (savedUser) currentUser = JSON.parse(savedUser);
+        } catch {}
+      }
+      const params = new URLSearchParams();
+      if (month) params.set('month', String(month));
+      if (sedeId && sedeId !== 'TODAS') params.set('sede_id', sedeId);
+      if (currentUser?.role) params.set('viewer_role', currentUser.role);
+      if (currentUser?.sede) params.set('viewer_sede', currentUser.sede);
+      if (currentUser?.username) params.set('viewer_username', currentUser.username);
+      const query = params.toString() ? `?${params.toString()}` : '';
+      return await fetchAPI(`/members/birthdays${query}`);
+    } catch {
+      return { month: month || (new Date().getMonth() + 1), count: 0, birthdays: [] };
     }
   },
 
