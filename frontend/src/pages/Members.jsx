@@ -132,6 +132,8 @@ export default function Members() {
   const [searchQuery, setSearchQuery] = useState('');
   const [ministryFilter, setMinistryFilter] = useState('ALL');
   const [selectedBirthdayMonth, setSelectedBirthdayMonth] = useState(() => new Date().getMonth() + 1);
+  const [birthdayScheduleTime, setBirthdayScheduleTime] = useState('05:00');
+  const [savingScheduleTime, setSavingScheduleTime] = useState(false);
 
   // Modal State for New Member
   const [openModal, setOpenModal] = useState(false);
@@ -174,10 +176,39 @@ export default function Members() {
     initial_password: '123'
   });
 
-  // Load members on mount and filter change
+  // Load members and schedule time on mount and filter change
   useEffect(() => {
     loadMembersData();
+    loadScheduleTime();
   }, [selectedSedeFilter, currentRole, user?.sede]);
+
+  const loadScheduleTime = async () => {
+    try {
+      const res = await membersAPI.getBirthdaySchedule();
+      if (res?.time) setBirthdayScheduleTime(res.time);
+    } catch {}
+  };
+
+  const handleUpdateScheduleTime = async (newTime) => {
+    setBirthdayScheduleTime(newTime);
+    setSavingScheduleTime(true);
+    try {
+      await membersAPI.setBirthdaySchedule(newTime);
+      setSnackbar({
+        open: true,
+        message: `⏰ ¡Hora de felicitaciones de cumpleaños actualizada a las ${newTime}!`,
+        severity: 'success'
+      });
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.message || 'Error al guardar horario de felicitación',
+        severity: 'error'
+      });
+    } finally {
+      setSavingScheduleTime(false);
+    }
+  };
 
   const loadMembersData = async () => {
     setLoading(true);
@@ -735,7 +766,7 @@ export default function Members() {
                   🎂 Cumpleaños del Mes de {MONTH_NAMES[Number(selectedBirthdayMonth) - 1]} ({monthlyBirthdays.length})
                 </Typography>
                 <Chip
-                  label="⏰ Envío automático en la App: 5:00 AM"
+                  label={`⏰ Envío programado: ${birthdayScheduleTime}`}
                   size="small"
                   sx={{
                     height: 21,
@@ -747,26 +778,42 @@ export default function Members() {
                 />
               </Stack>
               <Typography variant="caption" sx={{ color: '#92400E', fontWeight: 600 }}>
-                El cumpleañero del día recibe automáticamente su mensaje de felicitación a las 5:00 AM con notificación, sonido y vibración.
+                El cumpleañero del día recibe automáticamente su mensaje de felicitación a las {birthdayScheduleTime} con notificación, sonido y vibración.
               </Typography>
             </Box>
           </Stack>
 
-          <FormControl size="small" sx={{ minWidth: 180, backgroundColor: '#FFFFFF', borderRadius: 2 }}>
-            <InputLabel id="bday-month-label">Mes de Cumpleaños</InputLabel>
-            <Select
-              labelId="bday-month-label"
-              value={selectedBirthdayMonth}
-              label="Mes de Cumpleaños"
-              onChange={(e) => setSelectedBirthdayMonth(Number(e.target.value))}
-            >
-              {MONTH_NAMES.map((mName, idx) => (
-                <MenuItem key={mName} value={idx + 1}>
-                  🎂 {mName} {idx + 1 === (new Date().getMonth() + 1) ? '(Mes actual)' : ''}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+            {canManageAllSedes && (
+              <TextField
+                size="small"
+                type="time"
+                label="⏰ Hora de Envío"
+                value={birthdayScheduleTime}
+                disabled={savingScheduleTime}
+                onChange={(e) => handleUpdateScheduleTime(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ step: 300 }}
+                helperText="Configurable por Superadmin"
+                sx={{ width: 140, backgroundColor: '#FFFFFF', borderRadius: 2 }}
+              />
+            )}
+            <FormControl size="small" sx={{ minWidth: 170, backgroundColor: '#FFFFFF', borderRadius: 2 }}>
+              <InputLabel id="bday-month-label">Mes de Cumpleaños</InputLabel>
+              <Select
+                labelId="bday-month-label"
+                value={selectedBirthdayMonth}
+                label="Mes de Cumpleaños"
+                onChange={(e) => setSelectedBirthdayMonth(Number(e.target.value))}
+              >
+                {MONTH_NAMES.map((mName, idx) => (
+                  <MenuItem key={mName} value={idx + 1}>
+                    🎂 {mName} {idx + 1 === (new Date().getMonth() + 1) ? '(Mes actual)' : ''}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
         </Stack>
 
         {monthlyBirthdays.length === 0 ? (

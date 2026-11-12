@@ -656,6 +656,28 @@ export const membersAPI = {
     }
   },
 
+  getBirthdaySchedule: async () => {
+    try {
+      return await fetchAPI('/members/birthday-schedule');
+    } catch {
+      return { time: localStorage.getItem('restauracion_bday_sched_time') || '05:00' };
+    }
+  },
+
+  setBirthdaySchedule: async (timeStr) => {
+    try {
+      const res = await fetchAPI('/members/birthday-schedule', {
+        method: 'POST',
+        body: JSON.stringify({ time: timeStr })
+      });
+      localStorage.setItem('restauracion_bday_sched_time', timeStr);
+      return res;
+    } catch {
+      localStorage.setItem('restauracion_bday_sched_time', timeStr);
+      return { success: true, time: timeStr };
+    }
+  },
+
   create: async (memberData) => {
     try {
       const res = await fetchAPI('/members', {

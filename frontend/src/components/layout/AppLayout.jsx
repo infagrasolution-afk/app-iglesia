@@ -164,15 +164,20 @@ export default function AppLayout({ children }) {
         const now = new Date();
         const todayStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
 
-        // 1. Notificar a TODOS a partir de las 5:00 AM cuando alguien esté de cumpleaños hoy
-        if (now.getHours() >= 5) {
-          const bdayData = await membersAPI.getBirthdays(now.getMonth() + 1, 'TODAS');
+        // 1. Notificar a TODOS cuando alguien esté de cumpleaños hoy (según hora configurada)
+        const bdayData = await membersAPI.getBirthdays(now.getMonth() + 1, 'TODAS');
+        const schedTime = bdayData?.scheduled_time || '05:00';
+        const [schedH, schedM] = schedTime.split(':').map((v) => parseInt(v, 10));
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        const schedMin = schedH * 60 + (schedM || 0);
+
+        if (nowMin >= schedMin) {
           const todaysBirthdays = Array.isArray(bdayData?.birthdays)
             ? bdayData.birthdays.filter((b) => b.is_today)
             : [];
 
           for (const bPerson of todaysBirthdays) {
-            const notifiedKey = `restauracion_notified_bday_5am_${bPerson.id}_${todayStr}`;
+            const notifiedKey = `restauracion_notified_bday_${schedTime}_${bPerson.id}_${todayStr}`;
             if (!localStorage.getItem(notifiedKey)) {
               localStorage.setItem(notifiedKey, '1');
               const isMe =
@@ -186,7 +191,7 @@ export default function AppLayout({ children }) {
                 body: isMe
                   ? `¡Toda la familia de la Iglesia Restauración (${bPerson.sede_name || bPerson.sede_id}) te bendice en tu cumpleaños! «Jehová te bendiga, y te guarde» (Números 6:24-26).`
                   : `La familia de la Iglesia Restauración (${bPerson.sede_name || bPerson.sede_id}) celebra hoy la vida de ${bPerson.full_name}. ¡Envíale tus felicitaciones!`,
-                tag: `bday-5am-${bPerson.id}-${todayStr}`,
+                tag: `bday-${schedTime}-${bPerson.id}-${todayStr}`,
                 url: '/members',
                 type: 'birthday'
               });
@@ -284,11 +289,20 @@ export default function AppLayout({ children }) {
 
   useEffect(() => {
     if (!user) return;
-    let timer5am = null;
+    let timerSched = null;
 
-    const triggerBirthdayPopupAt5AM = () => {
+    const triggerBirthdayPopupAtSchedTime = async () => {
       const now = new Date();
-      // El envío automático al cumpleañero del día se realiza a partir de las 5:00 AM
+      let schedTime = '05:00';
+      try {
+        const bdayData = await membersAPI.getBirthdays(now.getMonth() + 1, 'TODAS');
+        if (bdayData?.scheduled_time) schedTime = bdayData.scheduled_time;
+      } catch {}
+
+      const [schedH, schedM] = schedTime.split(':').map((v) => parseInt(v, 10));
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const schedMin = schedH * 60 + (schedM || 0);
+
       let customGreeting = null;
       const userKey = (user.username || user.full_name || 'user').toLowerCase().trim();
       try {
@@ -298,12 +312,12 @@ export default function AppLayout({ children }) {
         }
       } catch {}
 
-      if (now.getHours() < 5 && !customGreeting) {
-        // Programar disparo exacto a las 5:00:00 AM de hoy
-        const fiveAM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 0, 0, 0);
-        const msUntil5AM = fiveAM.getTime() - now.getTime();
-        if (msUntil5AM > 0) {
-          timer5am = setTimeout(triggerBirthdayPopupAt5AM, msUntil5AM + 500);
+      if (nowMin < schedMin && !customGreeting) {
+        // Programar disparo exacto a la hora configurada (ej: 19:00 o 05:00)
+        const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), schedH, schedM || 0, 0, 0);
+        const msUntil = targetDate.getTime() - now.getTime();
+        if (msUntil > 0) {
+          timerSched = setTimeout(triggerBirthdayPopupAtSchedTime, msUntil + 500);
         }
         return;
       }
@@ -342,8 +356,8 @@ export default function AppLayout({ children }) {
         // Disparar notificación con sonido y vibración para el cumpleañero
         sendDeviceNotification({
           title: `🎂 ¡Feliz Cumpleaños, ${displayName}! 🎉`,
-          body: `Felicitación automática de las 5:00 AM de parte de la Iglesia Restauración (${sedeLabel}).`,
-          tag: `personal-bday-5am-${userKey}-${todayKey}`,
+          body: `Felicitación automática de las ${schedTime} de parte de la Iglesia Restauración (${sedeLabel}).`,
+          tag: `personal-bday-${schedTime}-${userKey}-${todayKey}`,
           url: '/',
           type: 'birthday'
         });
@@ -358,9 +372,9 @@ export default function AppLayout({ children }) {
       }
     };
 
-    triggerBirthdayPopupAt5AM();
+    triggerBirthdayPopupAtSchedTime();
     return () => {
-      if (timer5am) clearTimeout(timer5am);
+      if (timerSched) clearTimeout(timerSched);
     };
   }, [user, activeSedeDetails]);
 

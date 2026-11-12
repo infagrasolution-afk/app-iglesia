@@ -201,3 +201,14 @@ class DiscipleshipSubmission(Base):
     status = Column(String(50), default="PENDIENTE")             # PENDIENTE, APROBADO, CORREGIR
     evaluation_json = Column(Text, nullable=True)
     submitted_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class AppSetting(Base):
+    """
+    Configuraciones globales del sistema configurables por los Superadministradores.
+    """
+    __tablename__ = "app_settings"
+
+    key = Column(String(100), primary_key=True, index=True)
+    value = Column(Text, nullable=False)
+    description = Column(String(255), nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

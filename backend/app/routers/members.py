@@ -69,6 +69,14 @@ def _ensure_allowed_modules_column(db: Session):
         db.execute(text("ALTER TABLE users ALTER COLUMN phone TYPE VARCHAR(255);"))
         db.execute(text("ALTER TABLE users ALTER COLUMN email DROP NOT NULL;"))
         db.execute(text("ALTER TABLE members DROP CONSTRAINT IF EXISTS fk_members_sede;"))
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key VARCHAR(100) PRIMARY KEY,
+                value TEXT NOT NULL,
+                description VARCHAR(255),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+        """))
         db.commit()
     except Exception:
         db.rollback()
@@ -109,15 +117,34 @@ def build_birthday_greeting(full_name: str, sede_name: str = "Iglesia Restauraci
         f"Iglesia Restauración"
     )
 
+def get_birthday_notification_time(db: Session) -> str:
+    """Retorna la hora configurada de notificación de cumpleaños (ej: '05:00', '19:00'). Por defecto 05:00."""
+    try:
+        setting = db.query(models.AppSetting).filter(models.AppSetting.key == "birthday_notification_time").first()
+        if setting and setting.value:
+            val = setting.value.strip()
+            # Validar formato HH:MM
+            if re.match(r"^(?:[01]\d|2[0-3]):[0-5]\d$", val):
+                return val
+    except Exception:
+        pass
+    return "05:00"
+
 def dispatch_daily_5am_birthday_greetings(db: Session):
     """
-    Revisa automáticamente si ya son las 5:00 AM (Hora Venezuela UTC-4) o más,
+    Revisa automáticamente si ya se alcanzó la hora programada (Hora Venezuela UTC-4),
     y para cada cumpleañero del día publica y envía automáticamente su mensaje
     de felicitación de parte de la Iglesia Restauración.
     """
     try:
+        sched_time = get_birthday_notification_time(db)
+        sched_h, sched_m = [int(p) for p in sched_time.split(":")]
+
         ve_now = datetime.utcnow() - timedelta(hours=4)
-        if ve_now.hour < 5:
+        now_minutes = ve_now.hour * 60 + ve_now.minute
+        sched_minutes = sched_h * 60 + sched_m
+
+        if now_minutes < sched_minutes:
             return []
         today_month = ve_now.month
         today_day = ve_now.day
@@ -139,7 +166,7 @@ def dispatch_daily_5am_birthday_greetings(db: Session):
                 continue
 
             if b_month == today_month and b_day == today_day:
-                auto_category = f"Cumpleaños {today_date_str} (5:00 AM)"
+                auto_category = f"Cumpleaños {today_date_str} ({sched_time})"
                 expected_title = f"🎂 ¡Feliz Cumpleaños, {m.full_name}! 🎉"
                 existing_ann = db.query(models.Announcement).filter(
                     models.Announcement.title == expected_title,
@@ -154,7 +181,7 @@ def dispatch_daily_5am_birthday_greetings(db: Session):
                         is_important=True,
                         sede_id=m.sede_id or "TODAS",
                         sede_name=m.sede_name or "Todas las Sedes (Nacional)",
-                        created_by="Iglesia Restauración (Envío Automático 5:00 AM)"
+                        created_by=f"Iglesia Restauración (Envío Automático {sched_time})"
                     )
                     db.add(new_ann)
                     dispatched.append(m.full_name)
@@ -214,6 +241,57 @@ class MemberCreate(BaseModel):
     access_username: Optional[str] = None
     initial_password: Optional[str] = "123"
 
+class BirthdayTimeSetting(BaseModel):
+    time: str # Ej: '19:00', '05:00'
+
+@router.get("/birthday-schedule")
+def get_birthday_schedule(db: Session = Depends(get_db)):
+    """Obtener la hora configurada para el envío de notificaciones de cumpleaños (HH:MM)."""
+    _ensure_allowed_modules_column(db)
+    sched_time = get_birthday_notification_time(db)
+    return {"time": sched_time}
+
+@router.post("/birthday-schedule")
+def set_birthday_schedule(
+    req: BirthdayTimeSetting,
+    current_user: Optional[dict] = Depends(security.get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    """Permite al Superadmin configurar la hora en que se enviará la felicitación de cumpleaños."""
+    if current_user and current_user.get("role") not in {"SUPER_ADMIN", "ADMIN_PRINCIPAL", "ADMIN"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo un Superadministrador puede configurar el horario de notificaciones."
+        )
+
+    val = req.time.strip()
+    if not re.match(r"^(?:[01]\d|2[0-3]):[0-5]\d$", val):
+        raise HTTPException(
+            status_code=400,
+            detail="Formato de hora inválido. Debe ser HH:MM (24 horas), por ejemplo '19:00' o '05:00'."
+        )
+
+    _ensure_allowed_modules_column(db)
+    setting = db.query(models.AppSetting).filter(models.AppSetting.key == "birthday_notification_time").first()
+    if not setting:
+        setting = models.AppSetting(
+            key="birthday_notification_time",
+            value=val,
+            description="Hora diaria programada (HH:MM en 24h) para envío automático de felicitaciones de cumpleaños."
+        )
+        db.add(setting)
+    else:
+        setting.value = val
+
+    db.commit()
+    # Ejecutar comprobación inmediata con el nuevo horario configurado
+    dispatch_daily_5am_birthday_greetings(db)
+    return {
+        "success": True,
+        "time": val,
+        "message": f"Horario de felicitación de cumpleaños actualizado a las {val} exitosamente."
+    }
+
 @router.get("/birthdays")
 def get_monthly_birthdays(
     month: Optional[int] = Query(None, description="Mes (1-12). Por defecto mes actual"),
@@ -230,7 +308,14 @@ def get_monthly_birthdays(
     """
     _ensure_allowed_modules_column(db)
     dispatch_daily_5am_birthday_greetings(db)
+    sched_time = get_birthday_notification_time(db)
+    sched_h, sched_m = [int(p) for p in sched_time.split(":")]
+
     ve_now = datetime.utcnow() - timedelta(hours=4)
+    now_minutes = ve_now.hour * 60 + ve_now.minute
+    sched_minutes = sched_h * 60 + sched_m
+    is_time_reached = now_minutes >= sched_minutes
+
     target_month = month if (month and 1 <= month <= 12) else ve_now.month
     today_month = ve_now.month
     today_day = ve_now.day
@@ -283,15 +368,15 @@ def get_monthly_birthdays(
             "phone_visible": allowed_phone,
             "greeting_message": greeting_msg,
             "whatsapp_url": wa_url,
-            "scheduled_time": "05:00 AM",
-            "auto_dispatched_5am": (b_month == today_month and b_day == today_day and ve_now.hour >= 5)
+            "scheduled_time": sched_time,
+            "auto_dispatched": (b_month == today_month and b_day == today_day and is_time_reached)
         })
 
     birthdays.sort(key=lambda x: x["birth_day"])
     return {
         "month": target_month,
         "count": len(birthdays),
-        "scheduled_dispatch_time": "05:00 AM",
+        "scheduled_time": sched_time,
         "birthdays": birthdays
     }
 
