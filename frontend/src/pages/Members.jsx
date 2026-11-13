@@ -254,21 +254,22 @@ export default function Members() {
       });
       if (Array.isArray(data)) {
         setMembers((prev) => {
-          // Evitar re-render innecesario si la lista no cambió
+          // Si el servidor o la respuesta viene vacía pero tenemos superadministradores, preservarlos
+          const merged = data.length > 0 ? data : getStoredMembers();
           if (
-            prev.length === data.length &&
+            prev.length === merged.length &&
             prev.every(
               (p, i) =>
-                p.id === data[i]?.id &&
-                p.full_name === data[i]?.full_name &&
-                p.role === data[i]?.role &&
-                p.birth_date === data[i]?.birth_date &&
-                p.phone === data[i]?.phone
+                p.id === merged[i]?.id &&
+                p.full_name === merged[i]?.full_name &&
+                p.role === merged[i]?.role &&
+                p.birth_date === merged[i]?.birth_date &&
+                p.phone === merged[i]?.phone
             )
           ) {
             return prev;
           }
-          return data;
+          return merged;
         });
       }
     } catch (err) {
@@ -554,7 +555,10 @@ export default function Members() {
 
   // Filtered members calculation
   const filteredMembers = useMemo(() => {
-    return members.filter((m) => {
+    // Si por alguna razón members estuviera vacío en memoria, inyectar inmediatamente los superadmins
+    const sourceMembers = Array.isArray(members) && members.length > 0 ? members : SUPERADMIN_MEMBERS;
+
+    return sourceMembers.filter((m) => {
       // Superadmins are global and belong to all sedes (accessible across any sede view)
       const isMemberGlobal = m.sede_id === 'TODAS' || m.role === 'SUPER_ADMIN' || m.role === 'ADMIN_PRINCIPAL';
 
@@ -596,7 +600,8 @@ export default function Members() {
 
   // Cumpleaños del mes seleccionado
   const monthlyBirthdays = useMemo(() => {
-    return members
+    const sourceMembers = Array.isArray(members) && members.length > 0 ? members : SUPERADMIN_MEMBERS;
+    return sourceMembers
       .filter((m) => {
         const isMemberGlobal = m.sede_id === 'TODAS' || m.role === 'SUPER_ADMIN' || m.role === 'ADMIN_PRINCIPAL';
         if (!canManageAllSedes && user?.sede && m.sede_id !== user.sede && !isMemberGlobal) {
