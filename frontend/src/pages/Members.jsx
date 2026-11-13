@@ -50,6 +50,7 @@ import {
   Key as KeyIcon,
   DeleteOutline as DeleteIcon,
   Tune as TuneIcon,
+  Edit as EditIcon,
   Cake as CakeIcon,
   Celebration as CelebrationIcon
 } from '@mui/icons-material';
@@ -74,14 +75,20 @@ function parseBirthDateInfo(birthDateStr) {
   if (!month || !day || month < 1 || month > 12 || day < 1 || day > 31) return null;
   const now = new Date();
   const isToday = (now.getMonth() + 1) === month && now.getDate() === day;
+  const isTomorrow = (now.getMonth() + 1) === month && (now.getDate() + 1) === day;
   return {
     raw: clean,
     year,
     month,
     day,
     monthName: MONTH_NAMES[month - 1],
-    formatted: `${day} de ${MONTH_NAMES[month - 1]}`,
-    isToday
+    formatted: isToday
+      ? `🎉 ¡Hoy ${day} de ${MONTH_NAMES[month - 1]}!`
+      : isTomorrow
+        ? `🎈 Mañana ${day} de ${MONTH_NAMES[month - 1]}`
+        : `${day} de ${MONTH_NAMES[month - 1]}`,
+    isToday,
+    isTomorrow
   };
 }
 
@@ -321,8 +328,25 @@ export default function Members() {
     });
   };
 
+  const canEditMember = (member) => {
+    if (!member) return false;
+    if (canManageAllSedes) return true;
+    if (isSedeAdmin) {
+      if (member.role === 'SUPER_ADMIN') return false; // Solo Superadmin puede editar a otro Superadmin
+      return !user?.sede || user.sede === 'TODAS' || member.sede_id === user.sede;
+    }
+    return false;
+  };
+
   const handleOpenEditModules = (member) => {
-    if (!canCreateMembers) return;
+    if (!canEditMember(member)) {
+      setSnackbar({
+        open: true,
+        message: 'Acceso denegado: Solo los Superadministradores y el Administrador de esta sede pueden editar este registro.',
+        severity: 'error'
+      });
+      return;
+    }
     setModulesEditMember(member);
     setEditBirthDate(member.birth_date || '');
     setEditPhone(member.phone && !String(member.phone).startsWith('🔒') && member.phone !== 'No registrado' ? member.phone : '');
@@ -973,6 +997,31 @@ export default function Members() {
                   >
                     🎁 Enviar Felicitación de Restauración
                   </Button>
+
+                  {canEditMember(bMember) && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      startIcon={<EditIcon sx={{ fontSize: 15 }} />}
+                      onClick={() => handleOpenEditModules(bMember)}
+                      sx={{
+                        mt: 0.6,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 700,
+                        borderColor: '#D97706',
+                        color: '#B45309',
+                        backgroundColor: '#FFFFFF',
+                        '&:hover': {
+                          borderColor: '#B45309',
+                          backgroundColor: '#FEF3C7'
+                        }
+                      }}
+                    >
+                      ✏️ Editar Fecha de Cumpleaños
+                    </Button>
+                  )}
                 </Paper>
               </Grid>
             ))}
@@ -1177,15 +1226,17 @@ export default function Members() {
 
                       {canCreateMembers && (
                         <Stack direction="row" spacing={0.5}>
-                          <Tooltip title="Asignar qué módulos puede ver y cuáles no">
-                            <IconButton
-                              size="small"
-                              sx={{ color: '#2563EB', backgroundColor: '#EFF6FF', '&:hover': { backgroundColor: '#DBEAFE' } }}
-                              onClick={() => handleOpenEditModules(member)}
-                            >
-                              <TuneIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
+                          {canEditMember(member) && (
+                            <Tooltip title="Editar fecha de cumpleaños, teléfono y módulos permitidos">
+                              <IconButton
+                                size="small"
+                                sx={{ color: '#2563EB', backgroundColor: '#EFF6FF', '&:hover': { backgroundColor: '#DBEAFE' } }}
+                                onClick={() => handleOpenEditModules(member)}
+                              >
+                                <EditIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                           <Tooltip title="Ver credenciales y enviar bienvenida por WhatsApp">
                             <IconButton
                               size="small"
@@ -2030,10 +2081,10 @@ export default function Members() {
       >
         <DialogTitle sx={{ fontWeight: 800, color: '#0F172A', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <TuneIcon sx={{ color: '#2563EB' }} />
+            <EditIcon sx={{ color: '#2563EB' }} />
             <Box>
               <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', color: '#0F172A' }}>
-                Asignar Módulos Visibles
+                ✏️ Editar Fecha de Cumpleaños y Datos
               </Typography>
               <Typography variant="caption" sx={{ color: '#64748B' }}>
                 Miembro: <strong>{modulesEditMember?.full_name}</strong> ({modulesEditMember?.sede_name || modulesEditMember?.sede_id})
@@ -2046,7 +2097,7 @@ export default function Members() {
         </DialogTitle>
         <DialogContent dividers>
           <Alert severity="info" sx={{ mb: 2, borderRadius: '12px', fontSize: '0.8rem' }}>
-            Actualiza la fecha de nacimiento, teléfono encriptado y los módulos de la plataforma que podrá ver <strong>{modulesEditMember?.full_name}</strong>.
+            Puedes actualizar la <strong>fecha de nacimiento (cumpleaños)</strong>, teléfono de contacto y los módulos de la plataforma habilitados para <strong>{modulesEditMember?.full_name}</strong>.
           </Alert>
 
           <Grid container spacing={1.5} sx={{ mb: 2 }}>
@@ -2055,11 +2106,11 @@ export default function Members() {
                 fullWidth
                 size="small"
                 type="date"
-                label="🎂 Fecha de Nacimiento"
+                label="🎂 Fecha de Nacimiento (Cumpleaños)"
                 InputLabelProps={{ shrink: true }}
                 value={editBirthDate}
                 onChange={(e) => setEditBirthDate(e.target.value)}
-                helperText="Para aparecer en Cumpleaños del Mes"
+                helperText="El sistema enviará su felicitación automática el día indicado"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
